@@ -1,10 +1,10 @@
-# arduino_dewpoint
+# arDEWino
 
 Compares outdoor dewpoint with indoor dewpoint using National Weather Service API and an Arduino + SHT31 humidity sensor.
 
 Blinks yellow if outdoor dewpoint is more than 1 degree Celsius higher than indoor dewpoint.
 
-# TODO
+## TODO
 
 * switch hardware to communicate over BLE using battery
 * implement power consumption monitoring
