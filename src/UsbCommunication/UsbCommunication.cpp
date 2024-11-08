@@ -1,5 +1,7 @@
 #include <iostream>
 #include <string>
+#include <thread>
+#include <chrono>
 #include "UsbCommunication.h"
 
 UsbCommunication::UsbCommunication(const char* portname, speed_t baudRate)
@@ -67,4 +69,21 @@ std::string UsbCommunication::readData() {
     } else {
         return "";
     }
+}
+
+std::string UsbCommunication::getArduinoResponse(UsbCommunication* usbComm, const char* command, size_t expectedLength, int sleepDuration) {
+    std::string response;
+    while (true) {
+        usbComm->writeData(command);
+        response = usbComm->readData();
+
+        if (!response.empty() && response.size() == expectedLength) {
+            std::cout << "Arduino says: " << response << std::endl;
+            return response;
+        } else {
+            std::cout << "Waiting for command '" << command << "' ack..." << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(sleepDuration));
+        }
+    }
+    return response;
 }
