@@ -19,6 +19,7 @@ void setup() {
     while (1) delay(1);
   }
   pinMode(LED_BUILTIN, OUTPUT);
+  Serial.print("ready");
 }
 
 
@@ -29,23 +30,24 @@ void loop() {
       float temperature = sht31.readTemperature();
       float humidity = sht31.readHumidity();
       if (!isnan(temperature) && !isnan(humidity)) {
+        Serial.flush();
         Serial.print(temperature);
         Serial.print(",");
         Serial.print(humidity);
-        Serial.println();
+        // Serial.println();
       } else {
         Serial.println(-1);
       }
     }
     else if (incomingByte == '1' || incomingByte == '0') {
         ledState = (incomingByte == '1');
+        Serial.flush();
         Serial.print("a");
     }
   }
   if (ledState) {
     blinkLED();
   }
-  delay(50);
 }
 
 
