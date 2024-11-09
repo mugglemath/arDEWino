@@ -9,6 +9,8 @@
 
 
 int main() {
+
+    auto start = std::chrono::high_resolution_clock::now();
     dotenv::init("../.env");
     std::string office = dotenv::getenv("OFFICE");
     std::string gridX = dotenv::getenv("GRID_X");
@@ -62,5 +64,8 @@ int main() {
     }
 
     usbComm.closePort();
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
+    std::cout << "Program took " << duration << " ms" << std::endl;
     return EXIT_SUCCESS;
 }

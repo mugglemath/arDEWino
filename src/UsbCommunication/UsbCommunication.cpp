@@ -73,6 +73,7 @@ std::string UsbCommunication::readData() {
 
 std::string UsbCommunication::getArduinoResponse(UsbCommunication* usbComm, const char* command, size_t expectedLength, int sleepDuration) {
     std::string response;
+    std::cout << "Waiting for command '" << command << "' ack..." << std::endl;
     while (true) {
         usbComm->writeData(command);
         response = usbComm->readData();
@@ -81,7 +82,6 @@ std::string UsbCommunication::getArduinoResponse(UsbCommunication* usbComm, cons
             std::cout << "Arduino says: " << response << std::endl;
             return response;
         } else {
-            std::cout << "Waiting for command '" << command << "' ack..." << std::endl;
             std::this_thread::sleep_for(std::chrono::milliseconds(sleepDuration));
         }
     }
