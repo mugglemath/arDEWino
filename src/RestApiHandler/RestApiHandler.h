@@ -13,6 +13,7 @@ class RestApiHandler {
     std::string sendGetRequest(const std::string& url);
     std::string sendPostRequest(const std::string& url, const std::string& jsonData);
     double dewPointCalculator(double T, double RH);
+    double roundToTwoDecimals(double value);
     void sendSensorFeed(double indoorTemperature, double indoorHumidity, double indoorDewpoint);
     void sendWindowAlert(double indoorDewpoint, double outdoorDewpoint);
     void sendHumidityAlert(double indoorHumidity);

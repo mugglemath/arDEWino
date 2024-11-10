@@ -2,6 +2,7 @@
 #include <iostream>
 #include <math.h>
 #include <string>
+#include <cmath>
 
 RestApiHandler::RestApiHandler(const std::string& userAgent, const std::string& postUrlSensorFeed, const std::string& postUrlWindowAlert, const std::string& postUrlHumidityAlert)
     : userAgent(userAgent), postUrlSensorFeed(postUrlSensorFeed), postUrlWindowAlert(postUrlWindowAlert), postUrlHumidityAlert(postUrlHumidityAlert) {}
@@ -71,6 +72,11 @@ std::string RestApiHandler::sendPostRequest(const std::string& url, const std::s
 double RestApiHandler::dewPointCalculator(double T, double RH) {
     return (243.04 * (log(RH / 100) + ((17.625 * T) / (243.04 + T)))) /
            (17.625 - log(RH / 100) - ((17.625 * T) / (243.04 + T)));
+}
+
+
+double RestApiHandler::roundToTwoDecimals(double value) {
+    return std::round(value * 100.0) / 100.0;
 }
 
 
