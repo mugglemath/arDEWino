@@ -5,21 +5,20 @@
 #include <chrono>
 #include <dotenv.h>
 #include "UsbCommunication/UsbCommunication.h"
-#include "WeatherApi/WeatherApi.h"
+#include "RestApiHandler/RestApiHandler.h"
 
+const std::string GET_URL = "localhost:5000/weather/outdoor-dewpoint";
+const std::string POST_URL = "localhost:5000/arduino/sensor-values";
 
 int main() {
-
     auto start = std::chrono::high_resolution_clock::now();
-    dotenv::init("../.env");
-    std::string office = dotenv::getenv("OFFICE");
-    std::string gridX = dotenv::getenv("GRID_X");
-    std::string gridY = dotenv::getenv("GRID_Y");
-    std::string userAgent = dotenv::getenv("USER_AGENT");
+    dotenv::init("../.env");    
+
+    RestApiHandler api("arDEWino/0.xx");
     const char* portname = std::getenv("ARDUINO_PORT");
-    WeatherApi api(office, gridX, gridY, userAgent);
-    std::string apiResponse = api.getWeatherData();
-    double outdoorDewpoint = api.extractDewPoint(apiResponse);
+    std::string getRequestResponse = api.sendGetRequest(GET_URL);
+    std::cout << "GET Response from API: " << getRequestResponse << std::endl;
+    double outdoorDewpoint = std::stod(getRequestResponse);
     double indoorTemperature;
     double indoorHumidity;
     double indoorDewpoint;
@@ -47,6 +46,11 @@ int main() {
     indoorHumidity = std::stod(RH);
     indoorDewpoint = api.dewPointCalculator(indoorTemperature, indoorHumidity);
 
+    // api test
+    std::string jsonData = R"({"indoorTemperature": )" + std::to_string(indoorTemperature) + R"(, "indoorHumidity": )" + std::to_string(indoorHumidity) + R"(})";
+    std::string postRequestResponse = api.sendPostRequest(POST_URL, jsonData);
+    std::cout << "POST Response from API: " << postRequestResponse << std::endl;
+
     // debug
     std::cout << "indoorTemperature = " << indoorTemperature << std::endl;
     std::cout << "indoorHumidity = " << indoorHumidity << std::endl;
@@ -55,7 +59,7 @@ int main() {
     std::cout << "diff = " << (indoorDewpoint - outdoorDewpoint) << std::endl;
 
     // write 1 if outdoor > indoor
-    if ((indoorDewpoint - outdoorDewpoint) > 1.0) {
+    if ((indoorDewpoint - outdoorDewpoint) > -1.0) {
         std::string newResponse = usbComm.getArduinoResponse(&usbComm, "0", 1, 50);
         std::cout << "0 written" << std::endl;
     } else {
