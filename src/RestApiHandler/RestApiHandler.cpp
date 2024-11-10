@@ -1,15 +1,19 @@
 #include "RestApiHandler.h"
 #include <iostream>
 #include <math.h>
+#include <string>
 
-RestApiHandler::RestApiHandler(const std::string& userAgent) : userAgent(userAgent) {}
+RestApiHandler::RestApiHandler(const std::string& userAgent, const std::string& postUrlSensorFeed, const std::string& postUrlWindowAlert, const std::string& postUrlHumidityAlert)
+    : userAgent(userAgent), postUrlSensorFeed(postUrlSensorFeed), postUrlWindowAlert(postUrlWindowAlert), postUrlHumidityAlert(postUrlHumidityAlert) {}
 RestApiHandler::RestApiHandler() : userAgent("cpp app") {}
+
 
 size_t RestApiHandler::WriteCallback(void* contents, size_t size, size_t nmemb, std::string* userp) {
     size_t totalSize = size * nmemb;
     userp->append((char*)contents, totalSize);
     return totalSize;
 }
+
 
 std::string RestApiHandler::sendGetRequest(const std::string& url) {
     CURL* curl;
@@ -33,6 +37,7 @@ std::string RestApiHandler::sendGetRequest(const std::string& url) {
     return readBuffer;
 }
 
+
 std::string RestApiHandler::sendPostRequest(const std::string& url, const std::string& jsonData) {
     CURL* curl;
     CURLcode res;
@@ -42,7 +47,7 @@ std::string RestApiHandler::sendPostRequest(const std::string& url, const std::s
     if (curl) {
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, jsonData.c_str());
-        
+
         struct curl_slist *headers = NULL;
         headers = curl_slist_append(headers, "Content-Type: application/json");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
@@ -62,7 +67,39 @@ std::string RestApiHandler::sendPostRequest(const std::string& url, const std::s
     return readBuffer;
 }
 
+
 double RestApiHandler::dewPointCalculator(double T, double RH) {
     return (243.04 * (log(RH / 100) + ((17.625 * T) / (243.04 + T)))) /
            (17.625 - log(RH / 100) - ((17.625 * T) / (243.04 + T)));
+}
+
+
+void RestApiHandler::sendSensorFeed(double indoorTemperature, double indoorHumidity, double indoorDewpoint) {
+    std::string jsonDataSensorFeed =
+        R"({"indoorTemperature": )" + std::to_string(indoorTemperature) +
+        R"(, "indoorHumidity": )" + std::to_string(indoorHumidity) +
+        R"(, "indoorDewpoint": )" + std::to_string(indoorDewpoint) + R"(})";
+
+    std::string postRequestResponse = sendPostRequest(postUrlSensorFeed, jsonDataSensorFeed);
+    std::cout << "POST Response from Sensor Feed API: " << postRequestResponse << std::endl;
+}
+
+
+void RestApiHandler::sendWindowAlert(double indoorDewpoint, double outdoorDewpoint) {
+    std::string jsonDataWindowAlert =
+        R"({"indoorDewpoint": )" + std::to_string(indoorDewpoint) +
+        R"(, "outdoorDewpoint": )" + std::to_string(outdoorDewpoint) +
+        R"(, "dewpointDelta": )" + std::to_string(indoorDewpoint - outdoorDewpoint) + R"(})";
+
+    std::string postRequestResponse = sendPostRequest(postUrlWindowAlert, jsonDataWindowAlert);
+    std::cout << "POST Response from Window Alert API: " << postRequestResponse << std::endl;
+}
+
+
+void RestApiHandler::sendHumidityAlert(double indoorHumidity) {
+    std::string jsonDataHumidityAlert =
+        R"({"indoorHumidity": )" + std::to_string(indoorHumidity) + R"(})";
+
+    std::string postRequestResponse = sendPostRequest(postUrlHumidityAlert, jsonDataHumidityAlert);
+    std::cout << "POST Response from Humidity Alert API: " << postRequestResponse << std::endl;
 }
