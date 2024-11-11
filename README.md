@@ -6,7 +6,7 @@ arDEWino can notify users when the outdoor dewpoint is higher than the indoor de
 
 ## Current Functionality
 Computes indoor dewpoint and compares to outdoor dewpoint. Retrieves indoor temperature and humidity data from an Arduino Nano + SHT31 sensor over USB every 10 minutes. Onboard sensor readings are collected every few seconds and the device returns a simple moving average.
-Communicates with a REST API to retrieve outdoor weather information and pass sensor data.
+Communicates with a [REST API](https://github.com/mugglemath/dew-serve) to retrieve outdoor weather information and pass sensor data.
 Routes notifications and sensor data via Discord webhooks.
 Also, the microcontroller will blink yellow if outdoor dewpoint is more than 1 degree Celsius higher than indoor dewpoint.
 
