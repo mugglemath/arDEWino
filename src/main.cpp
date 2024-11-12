@@ -51,7 +51,7 @@ int main() {
             logSensorData(indoorTemperature, indoorHumidity, outdoorDewpoint, indoorDewpoint);
 
             // Send sensor data to REST API
-            api.sendSensorFeed(indoorTemperature, indoorHumidity, indoorDewpoint);
+            api.sendSensorFeed(indoorTemperature, indoorHumidity, indoorDewpoint, outdoorDewpoint);
             handleAlerts(usbComm, api, indoorDewpoint, outdoorDewpoint, indoorHumidity);
 
             usbComm.closePort();
