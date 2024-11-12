@@ -109,7 +109,7 @@ void RestApiHandler::sendWindowAlert(double indoorDewpoint, double outdoorDewpoi
         R"(, "dewpointDelta": )" + std::to_string(dewpointDelta) +
         R"(, "openWindows": )" + (openWindows ? "true" : "false") + R"(})";
     
-    // std::cout << "JSON Data to be sent: " << jsonDataSensorFeed << std::endl;
+    // std::cout << "JSON Data to be sent: " << jsonDataWindowAlert << std::endl;
     std::string postRequestResponse = sendPostRequest(postUrlWindowAlert, jsonDataWindowAlert);
     std::cout << "POST Response from Window Alert API: " << postRequestResponse << std::endl;
 }
@@ -121,7 +121,7 @@ void RestApiHandler::sendHumidityAlert(double indoorHumidity) {
         R"({"indoorHumidity": )" + std::to_string(indoorHumidity) + 
         R"(, "humidityAlert": )" + (humidityAlert ? "true" : "false") + R"(})";
     
-    // std::cout << "JSON Data to be sent: " << jsonDataSensorFeed << std::endl;
+    // std::cout << "JSON Data to be sent: " << jsonDataHumidityAlert << std::endl;
     std::string postRequestResponse = sendPostRequest(postUrlHumidityAlert, jsonDataHumidityAlert);
     std::cout << "POST Response from Humidity Alert API: " << postRequestResponse << std::endl;
 }
