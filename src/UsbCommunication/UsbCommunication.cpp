@@ -3,7 +3,9 @@
 #include <thread>
 #include <chrono>
 #include <stdexcept>
+#include <regex>
 #include "UsbCommunication.h"
+#include "../Utils/Utils.h"
 
 UsbCommunication::UsbCommunication(const char* portname, speed_t baudRate)
     : portname(portname), baudRate(baudRate), fd(-1) {}
@@ -72,7 +74,7 @@ std::string UsbCommunication::readData() {
     }
 }
 
-std::string UsbCommunication::getArduinoResponse(UsbCommunication* usbComm, const char* command, size_t expectedLength, int sleepDuration) {
+std::string UsbCommunication::getArduinoResponse(UsbCommunication* usbComm, const char* command, int sleepDuration) {
     int totalDuration = 0;
     std::string response;
     std::cout << "Waiting for command '" << command << "' ack..." << std::endl;
@@ -80,7 +82,7 @@ std::string UsbCommunication::getArduinoResponse(UsbCommunication* usbComm, cons
         usbComm->writeData(command);
         response = usbComm->readData();
 
-        if (!response.empty() && response.size() == expectedLength) {
+        if (!response.empty() && (isValidFloatFormat(response) || isValidSingleCharacter(response))) {
             std::cout << "Arduino says: " << response << std::endl;
             return response;
         } else if (totalDuration == 1000) {

@@ -18,7 +18,7 @@ class UsbCommunication {
     bool configurePort();
     void writeData(const char* data);
     std::string readData();
-    std::string getArduinoResponse(UsbCommunication* usbComm, const char* command, size_t expectedLength, int sleepDuration);
+    std::string getArduinoResponse(UsbCommunication* usbComm, const char* command, int sleepDuration);
 
  private:
     const char* portname;

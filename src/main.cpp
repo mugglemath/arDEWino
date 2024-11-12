@@ -41,7 +41,7 @@ int main() {
             double outdoorDewpoint = std::stod(api.sendGetRequest(GET_URL));
 
             // Read sensor data
-            std::string response = usbComm.getArduinoResponse(&usbComm, "d", 11, 50);
+            std::string response = usbComm.getArduinoResponse(&usbComm, "d", 50);
             double indoorTemperature, indoorHumidity;
             parseSensorData(response, indoorTemperature, indoorHumidity);
 
@@ -97,10 +97,10 @@ void logSensorData(double temperature, double humidity, double outdoorDewpoint, 
 
 void handleAlerts(UsbCommunication& usbComm, RestApiHandler& api, double indoorDewpoint, double outdoorDewpoint, double indoorHumidity) {
     if ((indoorDewpoint - outdoorDewpoint) > -1.0) {
-        usbComm.getArduinoResponse(&usbComm, "0", 1, 50);
+        usbComm.getArduinoResponse(&usbComm, "0", 50);
         std::cout << "Warning light OFF" << std::endl;
     } else {
-        usbComm.getArduinoResponse(&usbComm, "1", 1, 50);
+        usbComm.getArduinoResponse(&usbComm, "1", 50);
         api.sendWindowAlert(indoorDewpoint, outdoorDewpoint);
         std::cout << "Warning light ON" << std::endl;
     }
