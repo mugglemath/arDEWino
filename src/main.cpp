@@ -14,6 +14,8 @@ const char POST_URL_SENSOR_FEED[] = "localhost:5000/discord/sensor-feed";
 const char POST_URL_WINDOW_ALERT[] = "localhost:5000/discord/window-alert";
 const char POST_URL_HUMIDITY_ALERT[] = "localhost:5000/discord/humidity-alert";
 bool dataSent = false;
+bool weatherDataCollected = false;
+double outdoorDewpoint = 0;
 
 void parseSensorData(const std::string& response, double& temperature, double& humidity);
 void logSensorData(double temperature, double humidity, double outdoorDewpoint, double indoorDewpoint);
@@ -40,7 +42,10 @@ int main() {
             }
 
             // Get outdoor dewpoint from REST API
-            double outdoorDewpoint = std::stod(api.sendGetRequest(GET_URL));
+            if (!weatherDataCollected) {
+                outdoorDewpoint = std::stod(api.sendGetRequest(GET_URL));
+            }
+            weatherDataCollected = true;
 
             // Read sensor data and calculate indoor dewpoint
             std::string response = usbComm.getArduinoResponse(&usbComm, "d", 50);
@@ -59,10 +64,8 @@ int main() {
             dataSent = true;
 
             // Toggle window warning light on the Arduino
-            if (dataSent) {
-                toggleWarningLight(usbComm, indoorDewpoint, outdoorDewpoint);
-            }
-
+            toggleWarningLight(usbComm, indoorDewpoint, outdoorDewpoint);
+            
             usbComm.closePort();
             auto stop = std::chrono::high_resolution_clock::now();
             logDuration(start, stop);
