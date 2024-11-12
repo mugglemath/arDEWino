@@ -13,10 +13,12 @@ const char GET_URL[] = "localhost:5000/weather/outdoor-dewpoint";
 const char POST_URL_SENSOR_FEED[] = "localhost:5000/discord/sensor-feed";
 const char POST_URL_WINDOW_ALERT[] = "localhost:5000/discord/window-alert";
 const char POST_URL_HUMIDITY_ALERT[] = "localhost:5000/discord/humidity-alert";
+bool dataSent = false;
 
 void parseSensorData(const std::string& response, double& temperature, double& humidity);
 void logSensorData(double temperature, double humidity, double outdoorDewpoint, double indoorDewpoint);
-void handleAlerts(UsbCommunication& usbComm, RestApiHandler& api, double indoorDewpoint, double outdoorDewpoint, double indoorHumidity);
+void handleAlerts(RestApiHandler& api, double indoorDewpoint, double outdoorDewpoint, double indoorHumidity);
+void toggleWarningLight(UsbCommunication& usbComm, double indoorDewpoint, double outdoorDewpoint);
 void logDuration(const decltype(std::chrono::high_resolution_clock::now())& start, const decltype(std::chrono::high_resolution_clock::now())& stop);
 
 
@@ -40,24 +42,30 @@ int main() {
             // Get outdoor dewpoint from REST API
             double outdoorDewpoint = std::stod(api.sendGetRequest(GET_URL));
 
-            // Read sensor data
+            // Read sensor data and calculate indoor dewpoint
             std::string response = usbComm.getArduinoResponse(&usbComm, "d", 50);
             double indoorTemperature, indoorHumidity;
             parseSensorData(response, indoorTemperature, indoorHumidity);
-
             double indoorDewpoint = api.dewPointCalculator(indoorTemperature, indoorHumidity);
 
             // Debug output
             logSensorData(indoorTemperature, indoorHumidity, outdoorDewpoint, indoorDewpoint);
 
             // Send sensor data to REST API
-            api.sendSensorFeed(indoorTemperature, indoorHumidity, indoorDewpoint, outdoorDewpoint);
-            handleAlerts(usbComm, api, indoorDewpoint, outdoorDewpoint, indoorHumidity);
+            if (!dataSent) {
+                api.sendSensorFeed(indoorTemperature, indoorHumidity, indoorDewpoint, outdoorDewpoint);
+                handleAlerts(api, indoorDewpoint, outdoorDewpoint, indoorHumidity);
+            }
+            dataSent = true;
+
+            // Toggle window warning light on the Arduino
+            if (dataSent) {
+                toggleWarningLight(usbComm, indoorDewpoint, outdoorDewpoint);
+            }
 
             usbComm.closePort();
             auto stop = std::chrono::high_resolution_clock::now();
             logDuration(start, stop);
-
             break;
         } catch (const std::exception& e) {
             attempt++;
@@ -87,6 +95,7 @@ void parseSensorData(const std::string& response, double& temperature, double& h
     humidity = std::stod(RH);
 }
 
+
 void logSensorData(double temperature, double humidity, double outdoorDewpoint, double indoorDewpoint) {
     std::cout << "Indoor Temperature: " << temperature << "\n"
               << "Indoor Humidity: " << humidity << "\n"
@@ -95,20 +104,30 @@ void logSensorData(double temperature, double humidity, double outdoorDewpoint, 
               << "Dewpoint Delta: " << (indoorDewpoint - outdoorDewpoint) << "\n";
 }
 
-void handleAlerts(UsbCommunication& usbComm, RestApiHandler& api, double indoorDewpoint, double outdoorDewpoint, double indoorHumidity) {
+
+void handleAlerts(RestApiHandler& api, double indoorDewpoint, double outdoorDewpoint, double indoorHumidity) {
+    if ((indoorDewpoint - outdoorDewpoint) <= -1.0) {
+        api.sendWindowAlert(indoorDewpoint, outdoorDewpoint);
+        std::cout << "Window alert sent" << std::endl;
+    }
+
+    if (indoorHumidity > 57) {
+        api.sendHumidityAlert(indoorHumidity);
+        std::cout << "Humidity alert sent" << std::endl;
+    }
+}
+
+
+void toggleWarningLight(UsbCommunication& usbComm, double indoorDewpoint, double outdoorDewpoint) {
     if ((indoorDewpoint - outdoorDewpoint) > -1.0) {
         usbComm.getArduinoResponse(&usbComm, "0", 50);
         std::cout << "Warning light OFF" << std::endl;
     } else {
         usbComm.getArduinoResponse(&usbComm, "1", 50);
-        api.sendWindowAlert(indoorDewpoint, outdoorDewpoint);
         std::cout << "Warning light ON" << std::endl;
     }
-
-    if (indoorHumidity > 57) {
-        api.sendHumidityAlert(indoorHumidity);
-    }
 }
+
 
 void logDuration(const decltype(std::chrono::high_resolution_clock::now())& start,
                  const decltype(std::chrono::high_resolution_clock::now())& stop) {
