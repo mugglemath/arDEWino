@@ -90,7 +90,7 @@ void RestApiHandler::sendSensorFeed(double indoorTemperature, double indoorHumid
         R"(, "indoorDewpoint": )" + std::to_string(indoorDewpoint) +
         R"(, "outdoorDewpoint": )" + std::to_string(outdoorDewpoint) +
         R"(, "dewpointDelta": )" + std::to_string(dewpointDelta) +
-        R"(, "openWindows": )" + (openWindows ? "true" : "false") +
+        R"(, "windowsShouldBe": )" + (openWindows ? "open" : "closed") +
         R"(, "humidityAlert": )" + (humidityAlert ? "true" : "false") +
         R"(})";
 
@@ -107,7 +107,7 @@ void RestApiHandler::sendWindowAlert(double indoorDewpoint, double outdoorDewpoi
         R"({"indoorDewpoint": )" + std::to_string(indoorDewpoint) +
         R"(, "outdoorDewpoint": )" + std::to_string(outdoorDewpoint) +
         R"(, "dewpointDelta": )" + std::to_string(dewpointDelta) +
-        R"(, "openWindows": )" + (openWindows ? "true" : "false") + R"(})";
+        R"(, "windowsShouldBe": )" + (openWindows ? "open" : "closed") + R"(})";
     
     // std::cout << "JSON Data to be sent: " << jsonDataWindowAlert << std::endl;
     std::string postRequestResponse = sendPostRequest(postUrlWindowAlert, jsonDataWindowAlert);
