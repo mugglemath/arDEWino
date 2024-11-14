@@ -1,2 +1,4 @@
 *.cpp linguist-documentation=false
+*.cpp linguist-vendored=true
 *.py linguist-documentation=false
+*.py linguist-vendored=true
