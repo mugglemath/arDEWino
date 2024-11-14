@@ -1,0 +1,2 @@
+*.cpp linguist-documentation=false
+*.py linguist-documentation=false
