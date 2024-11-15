@@ -1,5 +1,5 @@
 CREATE TABLE indoor_environment (
-    device_name String,
+    device_id String,
     indoor_temperature Float64,
     indoor_humidity Float64,
     indoor_dewpoint Float64,
@@ -9,4 +9,4 @@ CREATE TABLE indoor_environment (
     humidity_alert UInt8,
     isoTimestamp DateTime DEFAULT now()
 ) ENGINE = MergeTree()
-ORDER BY (isoTimestamp, device_name);
+ORDER BY (isoTimestamp, device_id);

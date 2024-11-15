@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/mugglemath/go-dew/internal/db"
 	"github.com/mugglemath/go-dew/internal/discord"
 	"github.com/mugglemath/go-dew/internal/weather"
 )
@@ -59,8 +60,18 @@ func HandleSensorData(c *gin.Context) {
 		outdoor_dewpoint, dewpoint_delta, keep_windows, humidity_alert)
 
 	discord.SendDiscordMessage(message, os.Getenv("DISCORD_SENSOR_FEED_WEBHOOK_URL"))
-	fmt.Printf("Received data from C++ app: %v\n", data)
+	fmt.Printf("Received data from arDEWino-rs: %v\n", data)
 
+	conn, err := db.ConnectToClickHouse([]string{"localhost:9000"}, "default", "")
+	if err != nil {
+		fmt.Printf("failed to connect to ClickHouse: %v", err)
+	}
+	defer conn.Close()
+	err = db.InsertSensorFeedData(conn, device_id, indoor_temperature, indoor_humidity,
+		indoor_dewpoint, outdoor_dewpoint, dewpoint_delta, keep_windows, humidity_alert)
+	if err != nil {
+		fmt.Printf("failed to connect to ClickHouse: %v", err)
+	}
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "POST request received"})
 }
 
