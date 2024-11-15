@@ -4,15 +4,13 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/mugglemath/go-dew/internal/db"
 	"github.com/mugglemath/go-dew/internal/discord"
+	data "github.com/mugglemath/go-dew/internal/models"
 	"github.com/mugglemath/go-dew/internal/weather"
 )
-
-var outdoorDewpoint string = ""
 
 func HandleOutdoorDewpoint(c *gin.Context) {
 	response, err := weather.NwsAPIResponse(os.Getenv("OFFICE"), os.Getenv("GRID_X"), os.Getenv("GRID_Y"), os.Getenv("NWS_USER_AGENT"))
@@ -26,98 +24,52 @@ func HandleOutdoorDewpoint(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	outdoorDewpoint = fmt.Sprintf("%.2f", parsed)
 	c.JSON(http.StatusOK, parsed)
 }
 
 func HandleSensorData(c *gin.Context) {
-	var data map[string]interface{}
-	if err := c.BindJSON(&data); err != nil {
+	var data data.SensorData
+	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	device_id := data["device_id"].(string)
-	indoor_temperature := data["indoor_temperature"].(float64)
-	indoor_humidity := data["indoor_humidity"].(float64)
-	indoor_dewpoint := data["indoor_dewpoint"].(float64)
-	outdoor_dewpoint := data["outdoor_dewpoint"].(float64)
-	dewpoint_delta := data["dewpoint_delta"].(float64)
-	keep_windows := data["keep_windows"].(string)
-	humidity_alert := data["humidity_alert"].(bool)
-	isoTimestamp := time.Now().Format(time.RFC3339)
-
-	message := fmt.Sprintf("%s\n"+
-		"Sent from: %s\n"+
-		"Indoor Temperature: %.2f C\n"+
-		"Indoor Humidity: %.2f %%\n"+
-		"Indoor Dewpoint: %.2f C\n"+
-		"Outdoor Dewpoint: %.2f C\n"+
-		"Dewpoint Delta: %.2f C\n"+
-		"Keep Windows: %s\n"+
-		"Humidity Alert: %t",
-		isoTimestamp, device_id, indoor_temperature, indoor_humidity, indoor_dewpoint,
-		outdoor_dewpoint, dewpoint_delta, keep_windows, humidity_alert)
-
-	discord.SendDiscordMessage(message, os.Getenv("DISCORD_SENSOR_FEED_WEBHOOK_URL"))
-	fmt.Printf("Received data from arDEWino-rs: %v\n", data)
-
+	// send to db
 	conn, err := db.ConnectToClickHouse([]string{"localhost:9000"}, "default", "")
 	if err != nil {
-		fmt.Printf("failed to connect to ClickHouse: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to connect to ClickHouse"})
+		return
 	}
 	defer conn.Close()
-	err = db.InsertSensorFeedData(conn, device_id, indoor_temperature, indoor_humidity,
-		indoor_dewpoint, outdoor_dewpoint, dewpoint_delta, keep_windows, humidity_alert)
-	if err != nil {
-		fmt.Printf("failed to connect to ClickHouse: %v", err)
-	}
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "POST request received"})
-}
 
-func HandleWindowAlert(c *gin.Context) {
-	var data map[string]interface{}
-	if err := c.BindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	if err := db.InsertSensorFeedData(conn, data.DeviceID, data.IndoorTemperature,
+		data.IndoorHumidity, data.IndoorDewpoint, data.OutdoorDewpoint,
+		data.DewpointDelta, data.KeepWindows, data.HumidityAlert); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to insert data into ClickHouse"})
 		return
 	}
 
-	indoor_dewpoint := data["indoor_dewpoint"].(float64)
-	outdoor_dewpoint := data["outdoor_dewpoint"].(float64)
-	dewpoint_delta := data["dewpoint_delta"].(float64)
-	keep_windows := data["keep_windows"].(string)
-	isoTimestamp := time.Now().Format(time.RFC3339)
-
-	message := fmt.Sprintf("%s\n@everyone\n"+
-		"Sent from arDEWino-rs\n"+
-		"Indoor Dewpoint: %.2f C\n"+
-		"Outdoor Dewpoint: %.2f C\n"+
-		"Dewpoint Delta: %.2f C\n"+
-		"Keep Windows: %s\n",
-		isoTimestamp, indoor_dewpoint, outdoor_dewpoint, dewpoint_delta, keep_windows)
-
-	discord.SendDiscordMessage(message, os.Getenv("DISCORD_WINDOW_ALERT_WEBHOOK_URL"))
-	fmt.Printf("Received data from C++ app: %v\n", data)
-
+	// TODO: implement discord notification logic
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "POST request received"})
 }
 
-func HandleHumidityAlert(c *gin.Context) {
-	var data map[string]interface{}
-	if err := c.BindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
+func handleDiscordFeed(data data.SensorData) {
+	discord.SendDiscordMessage(func(d interface{}) string {
+		return discord.PrepareSensorFeedMessage(data)
+	}, os.Getenv("DISCORD_SENSOR_FEED_WEBHOOK_URL"))
+	fmt.Printf("Sent feed to Discord: %v\n", data)
+}
 
-	indoor_humidity := data["indoor_humidity"].(float64)
-	humidity_alert := data["humidity_alert"].(bool)
-	isoTimestamp := time.Now().Format(time.RFC3339)
+func handleWindowAlert(data data.SensorData) {
+	discord.SendDiscordMessage(func(d interface{}) string {
+		return discord.PrepareWindowAlertMessage(data)
+	}, os.Getenv("DISCORD_WINDOW_ALERT_WEBHOOK_URL"))
+	fmt.Printf("Sent Window Alert to Discord: %v\n", data)
+}
 
-	message := fmt.Sprintf("Sent from arDEWino-rs\n+%s\n@everyone\nIndoor Humidity: %.2f %%\nHumidity Alert: %t",
-		isoTimestamp, indoor_humidity, humidity_alert)
-
-	discord.SendDiscordMessage(message, os.Getenv("DISCORD_HUMIDITY_ALERT_WEBHOOK_URL"))
-	fmt.Printf("Received data from C++ app: %v\n", data)
-
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "POST request received"})
+func handleHumidityAlert(data data.SensorData) {
+	discord.SendDiscordMessage(func(d interface{}) string {
+		return discord.PrepareHumidityAlertMessage(data)
+	}, os.Getenv("DISCORD_HUMIDITY_ALERT_WEBHOOK_URL"))
+	fmt.Printf("Sent Humidity Alert to Discord: %v\n", data)
 }

@@ -52,9 +52,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // post to sensor feed
     http_requests::post_sensor_feed(&json_data_sensor_feed).await?;
 
-    // handle alerts
-    http_requests::handle_alerts(humidity_alert, keep_windows, &json_data_sensor_feed).await?;
-
     // toggle Arduino warning light
     usb::UsbCommunication::toggle_warning_light(&mut usb_comm, keep_windows)?;
 

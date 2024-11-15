@@ -60,30 +60,3 @@ pub async fn post_sensor_feed(json_string: &str) -> Result<(), Box<dyn Error>> {
         http_requests::post_request(&sensor_feed_url, serde_json::from_str(json_string)?).await?;
     Ok(())
 }
-
-pub async fn handle_alerts(
-    humidity_alert: bool,
-    keep_windows: bool,
-    json_string: &str,
-) -> Result<(), Box<dyn Error>> {
-    if humidity_alert {
-        let post_humidity_alert_url = std::env::var("POST_URL_HUMIDITY_ALERT")?;
-        crate::http_requests::post_request(
-            &post_humidity_alert_url,
-            serde_json::from_str(json_string)?,
-        )
-        .await?;
-        println!("Humidity alert sent.");
-    }
-
-    if !keep_windows {
-        let post_window_alert_url = std::env::var("POST_URL_WINDOW_ALERT")?;
-        crate::http_requests::post_request(
-            &post_window_alert_url,
-            serde_json::from_str(json_string)?,
-        )
-        .await?;
-        println!("Window alert sent.");
-    }
-    Ok(())
-}

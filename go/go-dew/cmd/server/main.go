@@ -40,9 +40,7 @@ func main() {
 	r := gin.Default()
 
 	r.GET("/weather/outdoor-dewpoint", handlers.HandleOutdoorDewpoint)
-	r.POST("/discord/sensor-feed", handlers.HandleSensorData)
-	r.POST("/discord/window-alert", handlers.HandleWindowAlert)
-	r.POST("/discord/humidity-alert", handlers.HandleHumidityAlert)
+	r.POST("/arduino/sensor-feed", handlers.HandleSensorData)
 
 	r.Run(":5000")
 }
