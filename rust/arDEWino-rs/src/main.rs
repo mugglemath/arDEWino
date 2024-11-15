@@ -19,6 +19,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let port = std::env::var("ARDUINO_PORT")?;
     let mut usb_comm = UsbCommunication::new(&port)?;
 
+    // TODO: change later to grab uid from ESP32 board
+    let device_id = "Arduino Nano USB".to_string();
+
     // initialize sensor feed variables
     let indoor_data = usb::UsbCommunication::get_indoor_sensor_data(&mut usb_comm)?;
     let outdoor_dewpoint = http_requests::get_outdoor_dewpoint().await?;
@@ -28,6 +31,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let humidity_alert = indoor_data.humidity > 57.0;
     let json_data_sensor_feed = http_requests::prepare_sensor_feed_json(
         &indoor_data,
+        device_id,
         indoor_dewpoint,
         outdoor_dewpoint,
         dewpoint_delta,

@@ -36,6 +36,7 @@ func HandleSensorData(c *gin.Context) {
 		return
 	}
 
+	device_id := data["device_id"].(string)
 	indoor_temperature := data["indoor_temperature"].(float64)
 	indoor_humidity := data["indoor_humidity"].(float64)
 	indoor_dewpoint := data["indoor_dewpoint"].(float64)
@@ -46,7 +47,7 @@ func HandleSensorData(c *gin.Context) {
 	isoTimestamp := time.Now().Format(time.RFC3339)
 
 	message := fmt.Sprintf("%s\n"+
-		"Sent from arDEWino-rs\n"+
+		"Sent from: %s\n"+
 		"Indoor Temperature: %.2f C\n"+
 		"Indoor Humidity: %.2f %%\n"+
 		"Indoor Dewpoint: %.2f C\n"+
@@ -54,7 +55,7 @@ func HandleSensorData(c *gin.Context) {
 		"Dewpoint Delta: %.2f C\n"+
 		"Keep Windows: %s\n"+
 		"Humidity Alert: %t",
-		isoTimestamp, indoor_temperature, indoor_humidity, indoor_dewpoint,
+		isoTimestamp, device_id, indoor_temperature, indoor_humidity, indoor_dewpoint,
 		outdoor_dewpoint, dewpoint_delta, keep_windows, humidity_alert)
 
 	discord.SendDiscordMessage(message, os.Getenv("DISCORD_SENSOR_FEED_WEBHOOK_URL"))
