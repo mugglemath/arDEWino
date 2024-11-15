@@ -28,7 +28,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let indoor_dewpoint = calculate_dewpoint(indoor_data.temperature, indoor_data.humidity);
     let dewpoint_delta = indoor_dewpoint - outdoor_dewpoint;
     let keep_windows = dewpoint_delta > -1.0;
-    let humidity_alert = indoor_data.humidity > 57.0;
+    let humidity_alert = indoor_data.humidity > 60.0;
     let json_data_sensor_feed = http_requests::prepare_sensor_feed_json(
         &indoor_data,
         device_id,
