@@ -48,6 +48,41 @@ func InsertSensorFeedData(conn clickhouse.Conn, deviceID string, indoorTemperatu
 	return nil
 }
 
+func GetLastKeepWindowsValue(conn clickhouse.Conn) (string, error) {
+	ctx := context.Background()
+	query := `
+        SELECT keep_windows
+        FROM my_database.indoor_environment
+        ORDER BY isoTimestamp DESC
+        LIMIT 1
+    `
+
+	var lastKeepWindows string
+	err := conn.QueryRow(ctx, query).Scan(&lastKeepWindows)
+	if err != nil {
+		return "", fmt.Errorf("failed to retrieve last humidity value: %w", err)
+	}
+
+	return lastKeepWindows, nil
+}
+
+func CheckRecentHumidityAlert(conn clickhouse.Conn) (bool, error) {
+	ctx := context.Background()
+	query := `
+        SELECT COUNT(*) > 0
+        FROM my_database.indoor_environment
+        WHERE humidity_alert = 1 AND isoTimestamp >= now() - INTERVAL 1 HOUR
+    `
+
+	var alertExists bool
+	err := conn.QueryRow(ctx, query).Scan(&alertExists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check recent humidity alert: %w", err)
+	}
+
+	return alertExists, nil
+}
+
 func createBatch(conn clickhouse.Conn) (driver.Batch, error) {
 	ctx := context.Background()
 
