@@ -14,7 +14,7 @@ use crate::models::IndoorSensorData;
 use calculations::calculate_dewpoint;
 use usb::UsbCommunication;
 
-// TODO: refactor for concurrent/parallel execution after hardware upgrade
+// TODO: refactor for concurrency
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let start_time_program = Instant::now();
