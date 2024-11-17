@@ -48,6 +48,7 @@ func HandleSensorData(c *gin.Context) {
 	if now.Minute() == 0 {
 		if err := handleDiscordFeed(data); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send data to Discord feed"})
+			return
 		}
 	}
 
@@ -60,6 +61,7 @@ func HandleSensorData(c *gin.Context) {
 	if currentKeepWindows != lastKeepWindows {
 		if err := handleWindowAlert(data); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to window alert to Discord"})
+			return
 		}
 	}
 
@@ -74,6 +76,7 @@ func HandleSensorData(c *gin.Context) {
 		if !recentHumidityAlert {
 			if err := handleHumidityAlert(data); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send humidity alert to Discord"})
+				return
 			}
 		}
 	}
