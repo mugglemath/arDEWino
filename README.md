@@ -14,7 +14,8 @@ arDEWino can notify users when the outdoor dewpoint is higher than the indoor de
 
 ## TODO
 ### Hardware
-* Switch to battery power
+* Figure out alternative battery solution
+  * (Anker PowerCore 5000 not working. Portable power banks shutdown if not enough current drawn) 
 * Measure power consumption
 
 ### Software
@@ -32,6 +33,6 @@ CI / CD after tests are written
 * Unit tests
 * Refactor for concurrency
 
-#### Visualizations
+#### Add a visualization dashboard service (e.g. Grafana)
 * Graph energy consumption
 * Graph sensor data
