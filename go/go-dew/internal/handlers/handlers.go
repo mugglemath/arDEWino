@@ -35,7 +35,7 @@ func HandleSensorData(c *gin.Context) {
 		return
 	}
 
-	// send to db
+	// connect to db
 	conn, err := db.ConnectToClickHouse([]string{"localhost:9000"}, "default", "")
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to connect to ClickHouse"})
@@ -43,18 +43,11 @@ func HandleSensorData(c *gin.Context) {
 	}
 	defer conn.Close()
 
-	if err := db.InsertSensorFeedData(conn, data.DeviceID, data.IndoorTemperature,
-		data.IndoorHumidity, data.IndoorDewpoint, data.OutdoorDewpoint,
-		data.DewpointDelta, data.KeepWindows, data.HumidityAlert); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to insert data into ClickHouse"})
-		return
-	}
-
 	// send Discord feed if it's time
 	now := time.Now()
-	if now.Minute() == 0 || now.Minute() == 30 {
+	if now.Minute() == 0 {
 		if err := handleDiscordFeed(data); err != nil {
-			fmt.Printf("failed to send Discord feed: ")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send data to Discord feed"})
 		}
 	}
 
@@ -66,21 +59,30 @@ func HandleSensorData(c *gin.Context) {
 	}
 	if currentKeepWindows != lastKeepWindows {
 		if err := handleWindowAlert(data); err != nil {
-			fmt.Printf("failed to handle window alert: ")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to window alert to Discord"})
 		}
 	}
 
 	// handle humidity alert
+	fmt.Printf("indoor_humidity: %f", data.IndoorHumidity)
 	if data.IndoorHumidity > 60.0 {
 		recentHumidityAlert, err := db.CheckRecentHumidityAlert(conn)
+		fmt.Printf("recent humidity alert: %t", recentHumidityAlert)
 		if err != nil {
 			fmt.Println("failed to check recent humidity alert: ")
 		}
 		if !recentHumidityAlert {
 			if err := handleHumidityAlert(data); err != nil {
-				fmt.Println("failed to handle humidity alert: ")
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send humidity alert to Discord"})
 			}
 		}
+	}
+
+	if err := db.InsertSensorFeedData(conn, data.DeviceID, data.IndoorTemperature,
+		data.IndoorHumidity, data.IndoorDewpoint, data.OutdoorDewpoint,
+		data.DewpointDelta, data.KeepWindows, data.HumidityAlert); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to insert data into ClickHouse"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "POST request received"})

@@ -1,12 +1,13 @@
-use regex::Regex;
-use serialport::{DataBits, FlowControl, Parity, SerialPort, StopBits};
 use std::error::Error;
 use std::io::{self, Read, Write};
 use std::thread;
 use std::time::Duration;
 use std::time::Instant;
 
+use regex::Regex;
+
 use crate::models::IndoorSensorData;
+use serialport::{DataBits, FlowControl, Parity, SerialPort, StopBits};
 
 pub struct UsbCommunication {
     port: Box<dyn SerialPort>,
@@ -14,7 +15,7 @@ pub struct UsbCommunication {
 
 impl UsbCommunication {
     pub fn new(port_name: &str) -> io::Result<Self> {
-        let port = serialport::new(port_name, 9600)
+        let port = serialport::new(port_name, 115200)
             .timeout(Duration::from_millis(100))
             .data_bits(DataBits::Eight)
             .parity(Parity::None)
@@ -107,7 +108,7 @@ fn is_valid_response(response: &str) -> bool {
     !response.is_empty() && (is_valid_float_format(response) || response == "a")
 }
 
-fn is_valid_float_format(input: &str) -> bool {
+pub fn is_valid_float_format(input: &str) -> bool {
     let float_pattern = Regex::new(r"^\d{2}\.\d{2},\d{2}\.\d{2}$").unwrap();
     float_pattern.is_match(input)
 }

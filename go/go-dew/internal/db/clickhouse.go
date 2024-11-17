@@ -71,7 +71,7 @@ func CheckRecentHumidityAlert(conn clickhouse.Conn) (bool, error) {
 	query := `
         SELECT COUNT(*) > 0
         FROM my_database.indoor_environment
-        WHERE humidity_alert = 1 AND isoTimestamp >= now() - INTERVAL 1 HOUR
+        WHERE humidity_alert = 1 AND isoTimestamp >= now() - toIntervalHour(1)
     `
 
 	var alertExists bool

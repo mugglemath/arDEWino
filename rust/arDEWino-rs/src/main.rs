@@ -1,13 +1,18 @@
-use calculations::calculate_dewpoint;
-use dotenv::dotenv;
 use std::error::Error;
 use std::time::Instant;
 
-mod usb;
-use usb::UsbCommunication;
+use clap::{Arg, Command};
+use dotenv::dotenv;
+
 mod calculations;
 mod http_requests;
 mod models;
+mod usb;
+mod wifi;
+
+use crate::models::IndoorSensorData;
+use calculations::calculate_dewpoint;
+use usb::UsbCommunication;
 
 // TODO: refactor for concurrent/parallel execution after hardware upgrade
 #[tokio::main]
@@ -15,15 +20,50 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let start_time_program = Instant::now();
     dotenv().ok();
 
-    // establish serial communication
-    let port = std::env::var("ARDUINO_PORT")?;
-    let mut usb_comm = UsbCommunication::new(&port)?;
+    let matches = Command::new("Sensor Program")
+        .about("Runs in USB or Wi-Fi mode")
+        .arg(
+            Arg::new("mode")
+                .help("Sets the mode of operation (usb or wifi)")
+                .required(true)
+                .index(1),
+        )
+        .get_matches();
+    let mode = matches.get_one::<String>("mode").unwrap();
+    println!("Running in {} mode", mode);
 
-    // TODO: change later to grab uid from ESP32 board
-    let device_id = "Arduino Nano USB".to_string();
+    // establish serial communication if mode == "usb"
+    let mut usb_comm = if mode == "usb" {
+        let port = std::env::var("ARDUINO_PORT")?;
+        Some(UsbCommunication::new(&port)?)
+    } else {
+        None
+    };
 
-    // initialize sensor feed variables
-    let indoor_data = usb::UsbCommunication::get_indoor_sensor_data(&mut usb_comm)?;
+    // get indoor sensor data depending on "usb" or "wifi" mode
+    let indoor_data: IndoorSensorData = match mode.as_str() {
+        "usb" => usb::UsbCommunication::get_indoor_sensor_data(usb_comm.as_mut().unwrap())?,
+        "wifi" => {
+            let arduino_ip = std::env::var("ARDUINO_IP")?;
+            let arduino_data_endpoint = format!("{}/data", arduino_ip);
+            wifi::fetch_indoor_data(arduino_data_endpoint.as_str()).await?
+        }
+        _ => {
+            eprintln!("Invalid mode: {}", mode);
+            std::process::exit(1);
+        }
+    };
+
+    // initialize device_id based on mode
+    let device_id = if mode.as_str() == "usb" {
+        "Arduino Nano USB".to_string()
+    } else if mode.as_str() == "wifi" {
+        "Arduino Nano ESP32 WiFi".to_string()
+    } else {
+        eprintln!("Invalid mode: {}", mode);
+        std::process::exit(1);
+    };
+
     let outdoor_dewpoint = http_requests::get_outdoor_dewpoint().await?;
     let indoor_dewpoint = calculate_dewpoint(indoor_data.temperature, indoor_data.humidity);
     let dewpoint_delta = indoor_dewpoint - outdoor_dewpoint;
@@ -53,7 +93,18 @@ async fn main() -> Result<(), Box<dyn Error>> {
     http_requests::post_sensor_feed(&json_data_sensor_feed).await?;
 
     // toggle Arduino warning light
-    usb::UsbCommunication::toggle_warning_light(&mut usb_comm, keep_windows)?;
+    if keep_windows {
+        if mode == "usb" {
+            if let Some(ref mut comm) = usb_comm {
+                usb::UsbCommunication::toggle_warning_light(comm, keep_windows)?;
+            } else {
+                eprintln!("USB communication not initialized.");
+                std::process::exit(1);
+            }
+        } else if mode == "wifi" {
+            wifi::toggle_warning_light(keep_windows).await?;
+        }
+    }
 
     let elapsed_time = start_time_program.elapsed();
     println!("Total program runtime: {:.2?}", elapsed_time);

@@ -1,4 +1,4 @@
-use reqwest;
+use reqwest::{self};
 use serde_json::json;
 use std::error::Error;
 
@@ -8,7 +8,6 @@ use crate::models::IndoorSensorData;
 
 pub async fn get_request(url: &str) -> Result<String, Box<dyn std::error::Error>> {
     let body = reqwest::get(url).await?.text().await?;
-    println!("GET response body: {}", body);
     Ok(body)
 }
 
@@ -27,6 +26,7 @@ pub async fn post_request(
 pub async fn get_outdoor_dewpoint() -> Result<f64, Box<dyn Error>> {
     let get_url = std::env::var("GET_URL")?;
     let get_response = crate::http_requests::get_request(&get_url).await?;
+    println!("GET outdoor_dewpoint response: {}", get_response.trim());
     get_response
         .parse::<f64>()
         .map_err(|_| "Invalid float format".into())
