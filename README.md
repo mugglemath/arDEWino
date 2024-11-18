@@ -18,6 +18,8 @@ arDEWino can notify users when the outdoor dewpoint is higher than the indoor de
   * REST API that handles outdoor weather information, sending Discord notifications/alerts, and the database
 * Clickhouse:
   * Columnar database optimized for analytics
+* Grafana:
+  * Open source interactive visualization and monitoring web app that connects to your database
 
 ## TODO
 ### Hardware
