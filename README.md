@@ -1,4 +1,4 @@
-# arDEWino: An Arduino-based Dewpoint Monitor
+# arDEWino: An Arduino-based Dew Point Monitor
 ## Overview
 
 <div align="center">
@@ -8,8 +8,8 @@
 </div>
 
 
-arDEWino is an Arduino-based dewpoint monitor designed to help maintain optimal indoor humidity levels and prevent mold growth. The system utilizes an Arduino Nano ESP32 microcontroller and a SHT31 temperature and humidity sensor to measure indoor conditions. It then compares the indoor dewpoint to the outdoor dewpoint retrieved from the National Weather Service.
-arDEWino can notify users when the outdoor dewpoint is higher than the indoor dewpoint, indicating that it's best to keep windows closed to prevent excess humidity from entering the home. The system can also be used for real-time temperature and humidity alerts, making it suitable for monitoring conditions for pets, instruments, or anything else sensitive to climate changes.
+arDEWino is an Arduino-based dew point monitor designed to help maintain optimal indoor humidity levels and prevent mold growth. The system utilizes an Arduino Nano ESP32 microcontroller and a SHT31 temperature and humidity sensor to measure indoor conditions. It then compares the indoor dew point to the outdoor dew point retrieved from the National Weather Service.
+arDEWino can notify users when the outdoor dew point is higher than the indoor dew point, indicating that it's best to keep windows closed to prevent excess humidity from entering the home. The system can also be used for real-time temperature and humidity alerts, making it suitable for monitoring conditions for pets, instruments, or anything else sensitive to climate changes.
 
 ## Current Components/Services
 * arDEWino-rs:
