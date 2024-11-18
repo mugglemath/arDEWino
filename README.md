@@ -44,4 +44,3 @@ CI / CD after tests are written
 
 #### Add a visualization dashboard service (e.g. Grafana)
 * Graph energy consumption
-* Graph sensor data
