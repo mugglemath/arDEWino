@@ -4,65 +4,56 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
-	"time"
-
-	data "github.com/mugglemath/go-dew/internal/models"
 )
 
-type MessagePrepFunc func(data interface{}) string
+type Client struct {
+	config Config
+}
 
-func SendDiscordMessage(prepFunc MessagePrepFunc, webhookURL string) {
-	message := prepFunc(data.SensorData{})
+type Config struct {
+	SensorFeedWebhook    string
+	WindowAlertWebhook   string
+	HumidityAlertWebhook string
+}
+
+func NewClient(config Config) *Client {
+	return &Client{
+		config: config,
+	}
+}
+
+func (c *Client) SendSensorFeed(message string) error {
+	return sendMessage(c.config.SensorFeedWebhook, message)
+}
+
+func (c *Client) SendWindowAlert(message string) error {
+	return sendMessage(c.config.WindowAlertWebhook, message)
+}
+
+func (c *Client) SendHumidityAlert(message string) error {
+	return sendMessage(c.config.HumidityAlertWebhook, message)
+}
+
+func sendMessage(webHookURL string, message string) error {
 	data := map[string]string{"content": message}
-	jsonData, _ := json.Marshal(data)
-
-	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(jsonData))
+	jsonBytes, err := json.Marshal(data)
 	if err != nil {
-		fmt.Printf("Failed to send message to Discord: %v\n", err)
-		return
+		return fmt.Errorf("failed to marshal message data: %w", err)
+	}
+
+	resp, err := http.Post(webHookURL, "application/json", bytes.NewBuffer(jsonBytes))
+	if err != nil {
+		return fmt.Errorf("failed to send message: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 204 {
-		body, _ := ioutil.ReadAll(resp.Body)
-		fmt.Printf("Failed to send message to Discord: %d, %s\n", resp.StatusCode, string(body))
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("failed to send message to Discord: %w\n%s", err, body)
+		}
 	}
-}
-
-func PrepareSensorFeedMessage(data data.SensorData) string {
-	isoTimestamp := time.Now().Format(time.RFC3339)
-	return fmt.Sprintf("%s\n"+
-		"Sent from: %s\n"+
-		"Indoor Temperature: %.2f C\n"+
-		"Indoor Humidity: %.2f %%\n"+
-		"Indoor Dewpoint: %.2f C\n"+
-		"Outdoor Dewpoint: %.2f C\n"+
-		"Dewpoint Delta: %.2f C\n"+
-		"Keep Windows: %s\n"+
-		"Humidity Alert: %t",
-		isoTimestamp, data.DeviceID, data.IndoorTemperature, data.IndoorHumidity,
-		data.IndoorDewpoint, data.OutdoorDewpoint, data.DewpointDelta,
-		data.KeepWindows, data.HumidityAlert)
-}
-
-func PrepareWindowAlertMessage(data data.SensorData) string {
-	isoTimestamp := time.Now().Format(time.RFC3339)
-	return fmt.Sprintf("%s\n@everyone\n"+
-		"Sent from %s\n"+
-		"Indoor Dewpoint: %.2f C\n"+
-		"Outdoor Dewpoint: %.2f C\n"+
-		"Dewpoint Delta: %.2f C\n"+
-		"Keep Windows: %s\n",
-		isoTimestamp, data.DeviceID, data.IndoorDewpoint, data.OutdoorDewpoint, data.DewpointDelta, data.KeepWindows)
-}
-
-func PrepareHumidityAlertMessage(data data.SensorData) string {
-	isoTimestamp := time.Now().Format(time.RFC3339)
-	return fmt.Sprintf("%s\n@everyone\n"+
-		"Sent from %s\n"+
-		"Indoor Humidity: %.2f %%\n"+
-		"Humidity Alert: %t",
-		isoTimestamp, data.DeviceID, data.IndoorHumidity, data.HumidityAlert)
+	return nil
 }

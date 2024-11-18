@@ -1,71 +1,84 @@
 package weather
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
+	"time"
 )
 
-func NwsAPIResponse(office string, gridX string, gridY string, nwsUserAgent string) (map[string]interface{}, error) {
-	url := fmt.Sprintf("https://api.weather.gov/gridpoints/%s/%s,%s", office, gridX, gridY)
-	req, err := http.NewRequest("GET", url, nil)
+type Client struct {
+	httpClient *http.Client
+	baseURL    string
+	userAgent  string
+}
+
+func NewClient(office, gridX, gridY, userAgent string) *Client {
+	baseURL := fmt.Sprintf("https://api.weather.gov/gridpoints/%s/%s,%s", office, gridX, gridY)
+	return &Client{
+		httpClient: &http.Client{Timeout: 10 * time.Second},
+		baseURL:    baseURL,
+		userAgent:  userAgent,
+	}
+}
+
+func NewClientFromLatLong(latitude, longitude, userAgent string) *Client {
+	baseURL := fmt.Sprintf("https://api.weather.gov/points/%s,%s", latitude, longitude)
+	return &Client{
+		httpClient: &http.Client{Timeout: 10 * time.Second},
+		baseURL:    baseURL,
+		userAgent:  userAgent,
+	}
+}
+
+// Define structs to match the JSON structure
+type WeatherResponse struct {
+	Properties struct {
+		Dewpoint struct {
+			Values []struct {
+				Value float64 `json:"value"`
+			} `json:"values"`
+		} `json:"dewpoint"`
+	} `json:"properties"`
+}
+
+func (c *Client) GetOutdoorDewPoint(ctx context.Context) (float64, error) {
+	req, err := http.NewRequest("GET", c.baseURL, nil)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	req.SetBasicAuth(nwsUserAgent, "")
+	req.Header.Add("User-Agent", c.userAgent)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("error fetching weather data: %d", resp.StatusCode)
+		return 0, fmt.Errorf("error fetching weather data: %d", resp.StatusCode)
 	}
 
-	var result map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&result)
+	var response WeatherResponse
+	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
-	return result, nil
-}
-
-func ParseOutdoorDewpoint(response map[string]interface{}) (float64, error) {
-	properties, ok := response["properties"].(map[string]interface{})
-	if !ok {
-		return 0, fmt.Errorf("invalid response format")
-	}
-
-	dewpoint, ok := properties["dewpoint"].(map[string]interface{})
-	if !ok {
-		return 0, fmt.Errorf("invalid dewpoint data")
-	}
-
-	values, ok := dewpoint["values"].([]interface{})
-	if !ok || len(values) == 0 {
+	if len(response.Properties.Dewpoint.Values) == 0 {
 		return 0, fmt.Errorf("no dewpoint values")
 	}
 
-	firstValue, ok := values[0].(map[string]interface{})
-	if !ok {
-		return 0, fmt.Errorf("invalid first dewpoint value")
-	}
-
-	value, ok := firstValue["value"].(float64)
-	if !ok {
-		return 0, fmt.Errorf("invalid dewpoint value type")
-	}
-
-	return value, nil
+	return response.Properties.Dewpoint.Values[0].Value, nil
 }
 
-func DewpointCalculator(T, RH float64) float64 {
-	return (243.04 * (math.Log(RH/100) + ((17.625 * T) / (243.04 + T)))) /
-		(17.625 - math.Log(RH/100) - ((17.625 * T) / (243.04 + T)))
+func DewpointCalculator(temperature, relativeHumidity float64) float64 {
+	t := temperature
+	rh := relativeHumidity
+	return (243.04 * (math.Log(rh/100) + ((17.625 * t) / (243.04 + t)))) /
+		(17.625 - math.Log(rh/100) - ((17.625 * t) / (243.04 + t)))
 }

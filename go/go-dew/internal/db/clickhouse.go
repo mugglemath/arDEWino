@@ -8,9 +8,14 @@ import (
 
 	"github.com/ClickHouse/clickhouse-go/v2"
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
+	"github.com/mugglemath/go-dew/internal/model"
 )
 
-func ConnectToClickHouse(addr []string, username, password string) (clickhouse.Conn, error) {
+type Client struct {
+	clickhouse.Conn
+}
+
+func ConnectToClickHouse(addr []string, username, password string) (*Client, error) {
 	conn, err := clickhouse.Open(&clickhouse.Options{
 		Addr: []string{addr[0]},
 		Auth: clickhouse.Auth{
@@ -22,14 +27,19 @@ func ConnectToClickHouse(addr []string, username, password string) (clickhouse.C
 		return nil, err
 	}
 	fmt.Println("Successfully connected to ClickHouse!")
-	return conn, nil
+	return &Client{conn}, nil
 }
 
-func InsertSensorFeedData(conn clickhouse.Conn, deviceID string, indoorTemperature float64,
-	indoorHumidity float64, indoorDewpoint float64, outdoorDewpoint float64,
-	dewpointDelta float64, keepWindows string, humidityAlert bool) error {
-
-	batch, err := createBatch(conn)
+func (c *Client) InsertSensorFeedData(ctx context.Context, sensorData model.SensorData) error {
+	deviceID := sensorData.DeviceID
+	indoorTemperature := sensorData.IndoorTemperature
+	indoorHumidity := sensorData.IndoorHumidity
+	indoorDewpoint := sensorData.IndoorDewpoint
+	outdoorDewpoint := sensorData.OutdoorDewpoint
+	dewpointDelta := sensorData.DewpointDelta
+	keepWindows := sensorData.KeepWindows
+	humidityAlert := sensorData.HumidityAlert
+	batch, err := createBatch(c)
 	if err != nil {
 		log.Printf("failed to create batch: %v", err)
 	}
@@ -48,8 +58,7 @@ func InsertSensorFeedData(conn clickhouse.Conn, deviceID string, indoorTemperatu
 	return nil
 }
 
-func GetLastKeepWindowsValue(conn clickhouse.Conn) (string, error) {
-	ctx := context.Background()
+func (c *Client) GetLastKeepWindowsValue(ctx context.Context) (string, error) {
 	query := `
         SELECT keep_windows
         FROM my_database.indoor_environment
@@ -58,7 +67,7 @@ func GetLastKeepWindowsValue(conn clickhouse.Conn) (string, error) {
     `
 
 	var lastKeepWindows string
-	err := conn.QueryRow(ctx, query).Scan(&lastKeepWindows)
+	err := c.QueryRow(ctx, query).Scan(&lastKeepWindows)
 	if err != nil {
 		return "", fmt.Errorf("failed to retrieve last humidity value: %w", err)
 	}
@@ -66,8 +75,7 @@ func GetLastKeepWindowsValue(conn clickhouse.Conn) (string, error) {
 	return lastKeepWindows, nil
 }
 
-func CheckRecentHumidityAlert(conn clickhouse.Conn) (bool, error) {
-	ctx := context.Background()
+func (c *Client) CheckRecentHumidityAlert(ctx context.Context) (bool, error) {
 	query := `
         SELECT COUNT(*) > 0
         FROM my_database.indoor_environment
@@ -75,7 +83,7 @@ func CheckRecentHumidityAlert(conn clickhouse.Conn) (bool, error) {
     `
 
 	var alertExists bool
-	err := conn.QueryRow(ctx, query).Scan(&alertExists)
+	err := c.QueryRow(ctx, query).Scan(&alertExists)
 	if err != nil {
 		return false, fmt.Errorf("failed to check recent humidity alert: %w", err)
 	}
