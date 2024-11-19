@@ -12,21 +12,26 @@ import (
 	"github.com/mugglemath/go-dew/internal/weather"
 )
 
-type Handler struct {
-	dbClient      *db.Client
-	discordClient *discord.Client
-	weatherClient *weather.Client
+type Handler interface {
+	HandleOutdoorDewpoint(ctx *gin.Context)
+	HandleSensorData(ctx *gin.Context)
 }
 
-func New(dbClient *db.Client, discordClient *discord.Client, weatherClient *weather.Client) *Handler {
-	return &Handler{
+type handlerImpl struct {
+	dbClient      db.Client
+	discordClient discord.Client
+	weatherClient weather.Client
+}
+
+func New(dbClient db.Client, discordClient discord.Client, weatherClient weather.Client) Handler {
+	return &handlerImpl{
 		dbClient:      dbClient,
 		discordClient: discordClient,
 		weatherClient: weatherClient,
 	}
 }
 
-func (h *Handler) HandleOutdoorDewpoint(ctx *gin.Context) {
+func (h *handlerImpl) HandleOutdoorDewpoint(ctx *gin.Context) {
 	dewPoint, err := h.weatherClient.GetOutdoorDewPoint(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -35,7 +40,7 @@ func (h *Handler) HandleOutdoorDewpoint(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, dewPoint)
 }
 
-func (h *Handler) HandleSensorData(ctx *gin.Context) {
+func (h *handlerImpl) HandleSensorData(ctx *gin.Context) {
 	var data model.SensorData
 	if err := ctx.ShouldBindJSON(&data); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})

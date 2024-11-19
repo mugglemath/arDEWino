@@ -13,8 +13,15 @@ import (
 	"time"
 )
 
-type Client struct {
+type clientImpl struct {
 	config Config
+}
+
+type Client interface {
+	SendSensorFeed(message string) error
+	SendWindowAlert(message string) error
+	SendHumidityAlert(message string) error
+	PanicHandler(debugStack string, req *http.Request)
 }
 
 type Config struct {
@@ -24,21 +31,47 @@ type Config struct {
 	DebugWebhook         string
 }
 
-func NewClient(config Config) *Client {
-	return &Client{
-		config: config,
+func New(config *Config) Client {
+	return &clientImpl{
+		config: *config,
 	}
 }
 
-func (c *Client) SendSensorFeed(message string) error {
+func (c *clientImpl) PanicHandler(debugStack string, req *http.Request) {
+	var buf bytes.Buffer
+	tee := io.TeeReader(req.Body, &buf)
+	body, _ := io.ReadAll(tee)
+	req.Body = io.NopCloser(&buf)
+
+	fileContent := fmt.Sprintf("Method: %s\nURL: %s\nHeaders: %v\nBody: %s\nDebug Stack:\n%s",
+		req.Method, req.URL.String(), req.Header, string(body), debugStack)
+
+	logDir := "./logs"
+	filePath, err := createFile(fileContent, logDir)
+	if err != nil {
+		log.Printf("Failed to create log file: %s", err)
+		log.Print(fileContent)
+		return
+	}
+
+	message := fmt.Sprintf("Panic occurred! Method: %s, URL: %s", req.Method, req.URL.String())
+
+	err = sendMessageWithAttachment(c.config.DebugWebhook, message, filePath)
+	if err != nil {
+		log.Printf("Failed to send panic to debug channel: %s", err)
+		log.Print(fileContent)
+	}
+}
+
+func (c *clientImpl) SendSensorFeed(message string) error {
 	return sendMessage(c.config.SensorFeedWebhook, message)
 }
 
-func (c *Client) SendWindowAlert(message string) error {
+func (c *clientImpl) SendWindowAlert(message string) error {
 	return sendMessage(c.config.WindowAlertWebhook, message)
 }
 
-func (c *Client) SendHumidityAlert(message string) error {
+func (c *clientImpl) SendHumidityAlert(message string) error {
 	return sendMessage(c.config.HumidityAlertWebhook, message)
 }
 
@@ -116,30 +149,4 @@ func sendMessageWithAttachment(webHookUrl, message, filePath string) error {
 	}
 
 	return nil
-}
-
-func (c *Client) PanicHandler(debugStack string, req *http.Request) {
-	var buf bytes.Buffer
-	tee := io.TeeReader(req.Body, &buf)
-	body, _ := io.ReadAll(tee)
-	req.Body = io.NopCloser(&buf)
-
-	fileContent := fmt.Sprintf("Method: %s\nURL: %s\nHeaders: %v\nBody: %s\nDebug Stack:\n%s",
-		req.Method, req.URL.String(), req.Header, string(body), debugStack)
-
-	logDir := "./logs"
-	filePath, err := createFile(fileContent, logDir)
-	if err != nil {
-		log.Printf("Failed to create log file: %s", err)
-		log.Print(fileContent)
-		return
-	}
-
-	message := fmt.Sprintf("Panic occurred! Method: %s, URL: %s", req.Method, req.URL.String())
-
-	err = sendMessageWithAttachment(c.config.DebugWebhook, message, filePath)
-	if err != nil {
-		log.Printf("Failed to send panic to debug channel: %s", err)
-		log.Print(fileContent)
-	}
 }

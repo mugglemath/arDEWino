@@ -9,24 +9,28 @@ import (
 	"time"
 )
 
-type Client struct {
+type Client interface {
+	GetOutdoorDewPoint(ctx context.Context) (float64, error)
+}
+
+type clientImpl struct {
 	httpClient *http.Client
 	baseURL    string
 	userAgent  string
 }
 
-func NewClient(office, gridX, gridY, userAgent string) *Client {
+func NewClient(office, gridX, gridY, userAgent string) *clientImpl {
 	baseURL := fmt.Sprintf("https://api.weather.gov/gridpoints/%s/%s,%s", office, gridX, gridY)
-	return &Client{
+	return &clientImpl{
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 		baseURL:    baseURL,
 		userAgent:  userAgent,
 	}
 }
 
-func NewClientFromLatLong(latitude, longitude, userAgent string) *Client {
+func NewClientFromLatLong(latitude, longitude, userAgent string) *clientImpl {
 	baseURL := fmt.Sprintf("https://api.weather.gov/points/%s,%s", latitude, longitude)
-	return &Client{
+	return &clientImpl{
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 		baseURL:    baseURL,
 		userAgent:  userAgent,
@@ -44,7 +48,7 @@ type WeatherResponse struct {
 	} `json:"properties"`
 }
 
-func (c *Client) GetOutdoorDewPoint(ctx context.Context) (float64, error) {
+func (c *clientImpl) GetOutdoorDewPoint(ctx context.Context) (float64, error) {
 	req, err := http.NewRequest("GET", c.baseURL, nil)
 	if err != nil {
 		return 0, err

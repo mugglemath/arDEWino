@@ -33,8 +33,8 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	// initialize clients
-	discord := ProvideDiscordClient(config)
-	handler, err := InitializeApp(config)
+	discord := ProvideDiscordClient(*config)
+	handler, err := InitializeApp(*config)
 	if err != nil {
 		log.Fatalf("failed to initialize app: %s", err)
 	}
@@ -47,7 +47,7 @@ func main() {
 	r.POST("/arduino/sensor-feed", handler.HandleSensorData)
 
 	go func() {
-		if err := r.Run(":5000"); err != nil {
+		if err := r.Run(":5555"); err != nil {
 			log.Fatalf("failed to run server: %v", err)
 		}
 	}()
@@ -75,16 +75,16 @@ func SetPanicRecoveryMiddleware(r *gin.Engine, fn RecoveryFn) {
 	})
 }
 
-func ProvideDB(config *Config) (*db.Client, error) {
+func ProvideDB(config Config) (db.Client, error) {
 	return db.ConnectToClickHouse([]string{"localhost:9000"}, "default", "")
 }
 
-func ProvideWeatherClient(config *Config) *weather.Client {
+func ProvideWeatherClient(config Config) weather.Client {
 	return weather.NewClient(config.Office, config.GridX, config.GridY, config.NWSUserAgent)
 }
 
-func ProvideDiscordClient(config *Config) *discord.Client {
-	return discord.NewClient(discord.Config{
+func ProvideDiscordClient(config Config) discord.Client {
+	return discord.New(&discord.Config{
 		SensorFeedWebhook:    config.DiscordSensorFeedWebhookURL,
 		WindowAlertWebhook:   config.DiscordWindowAlertWebhookURL,
 		HumidityAlertWebhook: config.DiscordHumidityAlertWebhookURL,
@@ -92,6 +92,6 @@ func ProvideDiscordClient(config *Config) *discord.Client {
 	})
 }
 
-func ProvideHandler(conn *db.Client, discordClient *discord.Client, weatherClient *weather.Client) *handler.Handler {
+func ProvideHandler(conn db.Client, discordClient discord.Client, weatherClient weather.Client) handler.Handler {
 	return handler.New(conn, discordClient, weatherClient)
 }

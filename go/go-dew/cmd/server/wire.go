@@ -8,7 +8,7 @@ import (
 	"github.com/mugglemath/go-dew/internal/handler"
 )
 
-func InitializeApp(config *Config) (*handler.Handler, error) {
+func InitializeApp(config Config) (handler.Handler, error) {
 	wire.Build(
 		ProvideDB,
 		ProvideWeatherClient,

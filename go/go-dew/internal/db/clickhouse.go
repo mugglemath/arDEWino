@@ -11,11 +11,17 @@ import (
 	"github.com/mugglemath/go-dew/internal/model"
 )
 
-type Client struct {
+type clientImpl struct {
 	clickhouse.Conn
 }
 
-func ConnectToClickHouse(addr []string, username, password string) (*Client, error) {
+type Client interface {
+	InsertSensorFeedData(ctx context.Context, sensorData model.SensorData) error
+	GetLastKeepWindowsValue(ctx context.Context) (string, error)
+	CheckRecentHumidityAlert(ctx context.Context) (bool, error)
+}
+
+func ConnectToClickHouse(addr []string, username, password string) (Client, error) {
 	conn, err := clickhouse.Open(&clickhouse.Options{
 		Addr: []string{addr[0]},
 		Auth: clickhouse.Auth{
@@ -27,10 +33,10 @@ func ConnectToClickHouse(addr []string, username, password string) (*Client, err
 		return nil, err
 	}
 	fmt.Println("Successfully connected to ClickHouse!")
-	return &Client{conn}, nil
+	return &clientImpl{conn}, nil
 }
 
-func (c *Client) InsertSensorFeedData(ctx context.Context, sensorData model.SensorData) error {
+func (c *clientImpl) InsertSensorFeedData(ctx context.Context, sensorData model.SensorData) error {
 	deviceID := sensorData.DeviceID
 	indoorTemperature := sensorData.IndoorTemperature
 	indoorHumidity := sensorData.IndoorHumidity
@@ -58,7 +64,7 @@ func (c *Client) InsertSensorFeedData(ctx context.Context, sensorData model.Sens
 	return nil
 }
 
-func (c *Client) GetLastKeepWindowsValue(ctx context.Context) (string, error) {
+func (c *clientImpl) GetLastKeepWindowsValue(ctx context.Context) (string, error) {
 	query := `
         SELECT keep_windows
         FROM my_database.indoor_environment
@@ -75,7 +81,7 @@ func (c *Client) GetLastKeepWindowsValue(ctx context.Context) (string, error) {
 	return lastKeepWindows, nil
 }
 
-func (c *Client) CheckRecentHumidityAlert(ctx context.Context) (bool, error) {
+func (c *clientImpl) CheckRecentHumidityAlert(ctx context.Context) (bool, error) {
 	query := `
         SELECT COUNT(*) > 0
         FROM my_database.indoor_environment
