@@ -42,29 +42,6 @@ func (c *Client) SendHumidityAlert(message string) error {
 	return sendMessage(c.config.HumidityAlertWebhook, message)
 }
 
-// func (c *Client) PanicHandler(debugStack string, req *http.Request) {
-// 	// TODO: re-implement me
-// 	var buf bytes.Buffer
-// 	tee := io.TeeReader(req.Body, &buf)
-// 	body, _ := io.ReadAll(tee)
-// 	req.Body = io.NopCloser(&buf)
-
-// 	// send top two in Discord message
-// 	// put all in file
-// 	muchPrint := func() {
-// 		log.Printf("Request Method: %s", req.Method)
-// 		log.Printf("Request URL: %s", req.URL.String())
-// 		log.Printf("Request Headers: %v", req.Header)
-// 		log.Printf("Request Body: %s", string(body))
-// 		log.Printf("Debug Stack:\n%s", debugStack)
-// 	}
-// 	err := sendMessageWithAttachment(c.config.DebugWebhook, "", "", "")
-// 	if err != nil {
-// 		log.Printf("failed to send panic to debug channel: %s", err)
-// 		muchPrint()
-// 	}
-// }
-
 func sendMessage(webHookURL string, message string) error {
 	data := map[string]string{"content": message}
 	jsonBytes, err := json.Marshal(data)
