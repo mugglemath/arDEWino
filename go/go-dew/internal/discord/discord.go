@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 )
 
@@ -16,6 +17,7 @@ type Config struct {
 	SensorFeedWebhook    string
 	WindowAlertWebhook   string
 	HumidityAlertWebhook string
+	DebugWebhook         string
 }
 
 func NewClient(config Config) *Client {
@@ -34,6 +36,29 @@ func (c *Client) SendWindowAlert(message string) error {
 
 func (c *Client) SendHumidityAlert(message string) error {
 	return sendMessage(c.config.HumidityAlertWebhook, message)
+}
+
+func (c *Client) PanicHandler(debugStack string, req *http.Request) {
+	// TODO: re-implement me
+	var buf bytes.Buffer
+	tee := io.TeeReader(req.Body, &buf)
+	body, _ := io.ReadAll(tee)
+	req.Body = io.NopCloser(&buf)
+
+	// send top two in Discord message
+	// put all in file
+	muchPrint := func() {
+		log.Printf("Request Method: %s", req.Method)
+		log.Printf("Request URL: %s", req.URL.String())
+		log.Printf("Request Headers: %v", req.Header)
+		log.Printf("Request Body: %s", string(body))
+		log.Printf("Debug Stack:\n%s", debugStack)
+	}
+	err := sendMessageWithAttachment(c.config.DebugWebhook, "", "", "")
+	if err != nil {
+		log.Printf("failed to send panic to debug channel: %s", err)
+		muchPrint()
+	}
 }
 
 func sendMessage(webHookURL string, message string) error {
@@ -55,5 +80,10 @@ func sendMessage(webHookURL string, message string) error {
 			return fmt.Errorf("failed to send message to Discord: %w\n%s", err, body)
 		}
 	}
+	return nil
+}
+
+func sendMessageWithAttachment(webHookUrl string, message string, filename string, content string) error {
+	// TODO: implement and make private
 	return nil
 }

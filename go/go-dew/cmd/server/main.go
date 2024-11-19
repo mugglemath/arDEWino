@@ -1,88 +1,60 @@
 package main
 
 import (
-	"bytes"
-	"io"
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime/debug"
+	"syscall"
 
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"github.com/mugglemath/go-dew/internal/db"
 	"github.com/mugglemath/go-dew/internal/discord"
 	"github.com/mugglemath/go-dew/internal/handler"
 	"github.com/mugglemath/go-dew/internal/weather"
 )
 
-var (
-	office                         string
-	gridX                          string
-	gridY                          string
-	nwsUserAgent                   string
-	discordSensorFeedWebhookURL    string
-	discordWindowAlertWebhookURL   string
-	discordHumidityAlertWebhookURL string
-	outdoorDewpoint                float64
-	isoTimestamp                   string
-)
-
 func init() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
-
-	office = os.Getenv("OFFICE")
-	gridX = os.Getenv("GRID_X")
-	gridY = os.Getenv("GRID_Y")
-	nwsUserAgent = os.Getenv("NWS_USER_AGENT")
-	discordSensorFeedWebhookURL = os.Getenv("DISCORD_SENSOR_FEED_WEBHOOK_URL")
-	discordWindowAlertWebhookURL = os.Getenv("DISCORD_WINDOW_ALERT_WEBHOOK_URL")
-	discordHumidityAlertWebhookURL = os.Getenv("DISCORD_HUMIDITY_ALERT_WEBHOOK_URL")
 }
 
 func main() {
-	// connect to db
-	conn, err := db.ConnectToClickHouse([]string{"localhost:9000"}, "default", "")
+	config, err := NewConfig()
 	if err != nil {
-		log.Fatalf("failed to connect to db: %s", err)
+		log.Fatal(err)
 	}
-	defer conn.Close()
 
-	weatherClient := weather.NewClient(office, gridX, gridY, nwsUserAgent)
+	// listen for SIGTERM (and SIGINT) signals
+	_, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
-	discordClient := discord.NewClient(discord.Config{
-		SensorFeedWebhook:    discordSensorFeedWebhookURL,
-		WindowAlertWebhook:   discordWindowAlertWebhookURL,
-		HumidityAlertWebhook: discordHumidityAlertWebhookURL,
-	})
-
-	h := handler.New(conn, discordClient, weatherClient)
+	// initialize clients
+	discord := ProvideDiscordClient(config)
+	handler, err := InitializeApp(config)
+	if err != nil {
+		log.Fatalf("failed to initialize app: %s", err)
+	}
 
 	r := gin.Default()
-	SetPanicRecoveryMiddleware(r, logRequestDetails)
 
-	r.GET("/weather/outdoor-dewpoint", h.HandleOutdoorDewpoint)
-	r.POST("/arduino/sensor-feed", h.HandleSensorData)
+	SetPanicRecoveryMiddleware(r, discord.PanicHandler)
 
-	r.Run(":5000")
-}
+	r.GET("/weather/outdoor-dewpoint", handler.HandleOutdoorDewpoint)
+	r.POST("/arduino/sensor-feed", handler.HandleSensorData)
 
-// send to discord as well
-func logRequestDetails(debugStack string, req *http.Request) {
-	log.Printf("Debug Stack:\n%s", debugStack)
-	var buf bytes.Buffer
-	tee := io.TeeReader(req.Body, &buf)
-	body, _ := io.ReadAll(tee)
-	req.Body = io.NopCloser(&buf)
+	go func() {
+		if err := r.Run(":5000"); err != nil {
+			log.Fatalf("failed to run server: %v", err)
+		}
+	}()
 
-	log.Printf("Request Method: %s", req.Method)
-	log.Printf("Request URL: %s", req.URL.String())
-	log.Printf("Request Headers: %v", req.Header)
-	log.Printf("Request Body: %s", string(body))
+	<-sigs
+	log.Println("Received shutdown signal. Exiting...")
+	cancel()
 }
 
 type RecoveryFn func(debugStack string, req *http.Request)
@@ -91,14 +63,9 @@ func SetPanicRecoveryMiddleware(r *gin.Engine, fn RecoveryFn) {
 	r.Use(func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
-				// Log the panic
 				log.Printf("Panic recovered: %v", err)
-
-				// Get and log the debug stack
 				stack := debug.Stack()
 				fn(string(stack), c.Request)
-
-				// Return a 500 Internal Server Error response
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 					"error": "Internal Server Error",
 				})
@@ -106,4 +73,25 @@ func SetPanicRecoveryMiddleware(r *gin.Engine, fn RecoveryFn) {
 		}()
 		c.Next()
 	})
+}
+
+func ProvideDB(config *Config) (*db.Client, error) {
+	return db.ConnectToClickHouse([]string{"localhost:9000"}, "default", "")
+}
+
+func ProvideWeatherClient(config *Config) *weather.Client {
+	return weather.NewClient(config.Office, config.GridX, config.GridY, config.NWSUserAgent)
+}
+
+func ProvideDiscordClient(config *Config) *discord.Client {
+	return discord.NewClient(discord.Config{
+		SensorFeedWebhook:    config.DiscordSensorFeedWebhookURL,
+		WindowAlertWebhook:   config.DiscordWindowAlertWebhookURL,
+		HumidityAlertWebhook: config.DiscordHumidityAlertWebhookURL,
+		DebugWebhook:         config.DiscordDebugWebhookURL,
+	})
+}
+
+func ProvideHandler(conn *db.Client, discordClient *discord.Client, weatherClient *weather.Client) *handler.Handler {
+	return handler.New(conn, discordClient, weatherClient)
 }
