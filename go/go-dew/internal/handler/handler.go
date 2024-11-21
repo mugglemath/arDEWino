@@ -61,6 +61,7 @@ func (h *handlerImpl) HandleSensorData(ctx *gin.Context) {
 	lastKeepWindows, err := h.dbClient.GetLastKeepWindowsValue(ctx)
 	if err != nil {
 		fmt.Printf("failed to get last keep windows value: ")
+		return
 	}
 	if currentKeepWindows != lastKeepWindows {
 		h.discordClient.SendSensorFeed(data.FeedMessage())
@@ -77,6 +78,7 @@ func (h *handlerImpl) HandleSensorData(ctx *gin.Context) {
 		fmt.Printf("recent humidity alert: %t", recentHumidityAlert)
 		if err != nil {
 			fmt.Println("failed to check recent humidity alert: ")
+			return
 		}
 		if !recentHumidityAlert {
 			h.discordClient.SendSensorFeed(data.FeedMessage())

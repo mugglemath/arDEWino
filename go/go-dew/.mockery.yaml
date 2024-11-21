@@ -1,0 +1,33 @@
+with-expecter: true
+issue-845-fix: True
+packages:
+  github.com/mugglemath/go-dew/internal/db:
+    config:
+      dir: "./mock/{{.PackageName}}"
+      inpackage: true
+    interfaces:
+      Client:
+  github.com/ClickHouse/clickhouse-go/v2/lib/driver:
+    config:
+      dir: "./mock/{{.PackageName}}"
+      inpackage: true
+    interfaces:
+      Conn:
+  github.com/mugglemath/go-dew/internal/discord:
+    config:
+      dir: "./mock/{{.PackageName}}"
+      inpackage: true
+    interfaces:
+      Client:
+  github.com/mugglemath/go-dew/internal/handler:
+    config:
+      dir: "./mock/{{.PackageName}}"
+      inpackage: true
+    interfaces:
+      Handler:
+  github.com/mugglemath/go-dew/internal/weather:
+    config:
+      dir: "./mock/{{.PackageName}}"
+      inpackage: true
+    interfaces:
+      Client:

@@ -21,6 +21,10 @@ type Client interface {
 	CheckRecentHumidityAlert(ctx context.Context) (bool, error)
 }
 
+func New(conn clickhouse.Conn) Client {
+	return &clientImpl{Conn: conn}
+}
+
 func ConnectToClickHouse(addr []string, username, password string) (Client, error) {
 	conn, err := clickhouse.Open(&clickhouse.Options{
 		Addr: []string{addr[0]},
@@ -47,18 +51,18 @@ func (c *clientImpl) InsertSensorFeedData(ctx context.Context, sensorData model.
 	humidityAlert := sensorData.HumidityAlert
 	batch, err := createBatch(c)
 	if err != nil {
-		log.Printf("failed to create batch: %v", err)
+		return fmt.Errorf("failed to create batch: %v", err)
 	}
 
 	err = appendToBatch(batch, deviceID, indoorTemperature, indoorHumidity, indoorDewpoint,
 		outdoorDewpoint, dewpointDelta, keepWindows, humidityAlert)
 	if err != nil {
-		log.Printf("failed to append to batch: %v", err)
+		return fmt.Errorf("failed to append to batch: %v", err)
 	}
 
 	err = sendBatch(batch)
 	if err != nil {
-		log.Printf("failed to send batch: %v", err)
+		return fmt.Errorf("failed to send batch: %v", err)
 	}
 	fmt.Println("Successfully inserted batch to Clickhouse!")
 	return nil
@@ -77,7 +81,6 @@ func (c *clientImpl) GetLastKeepWindowsValue(ctx context.Context) (string, error
 	if err != nil {
 		return "", fmt.Errorf("failed to retrieve last humidity value: %w", err)
 	}
-
 	return lastKeepWindows, nil
 }
 
