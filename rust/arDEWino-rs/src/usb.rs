@@ -60,7 +60,7 @@ impl UsbCommunication {
             let response = self.read_data()?;
             let trimmed_response = response.trim();
 
-            if is_valid_response(&trimmed_response) {
+            if is_valid_response(trimmed_response) {
                 println!("Arduino says: {}", response);
                 return Ok(response);
             }

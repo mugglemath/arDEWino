@@ -16,7 +16,7 @@ pub async fn fetch_indoor_data(
         let arduino_data = get_request(arduino_data_endpoint).await?;
         println!("GET Arduino data response = {}", arduino_data.trim());
 
-        if is_valid_float_format(&arduino_data.trim()) {
+        if is_valid_float_format(arduino_data.trim()) {
             let parts: Vec<&str> = arduino_data.split(',').collect();
 
             if parts.len() < 2 {

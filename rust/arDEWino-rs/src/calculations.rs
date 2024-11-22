@@ -1,5 +1,5 @@
 pub fn calculate_dewpoint(t: f64, rh: f64) -> f64 {
-    if rh < 0.0 || rh > 100.0 {
+    if !(0.0..=100.0).contains(&rh) {
         panic!("Relative humidity must be between 0 and 100.");
     }
     let rh_decimal = rh / 100.0;
