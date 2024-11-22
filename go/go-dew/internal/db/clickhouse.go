@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/ClickHouse/clickhouse-go/v2"
@@ -49,20 +48,25 @@ func (c *clientImpl) InsertSensorFeedData(ctx context.Context, sensorData model.
 	dewpointDelta := sensorData.DewpointDelta
 	keepWindows := sensorData.KeepWindows
 	humidityAlert := sensorData.HumidityAlert
+
 	batch, err := createBatch(c)
 	if err != nil {
-		return fmt.Errorf("failed to create batch: %v", err)
+		return fmt.Errorf("failed to create batch for sensor data: %w", err)
+	}
+
+	if batch == nil {
+		return fmt.Errorf("batch is nil after creation")
 	}
 
 	err = appendToBatch(batch, deviceID, indoorTemperature, indoorHumidity, indoorDewpoint,
 		outdoorDewpoint, dewpointDelta, keepWindows, humidityAlert)
 	if err != nil {
-		return fmt.Errorf("failed to append to batch: %v", err)
+		return fmt.Errorf("failed to append sensor data to batch: %w", err)
 	}
 
 	err = sendBatch(batch)
 	if err != nil {
-		return fmt.Errorf("failed to send batch: %v", err)
+		return fmt.Errorf("failed to send batch of sensor data: %w", err)
 	}
 	fmt.Println("Successfully inserted batch to Clickhouse!")
 	return nil
@@ -117,7 +121,7 @@ func createBatch(conn clickhouse.Conn) (driver.Batch, error) {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
-		log.Printf("failed to prepare batch: %v", err)
+		return nil, fmt.Errorf("failed to create batch: %w", err)
 	}
 	return batch, nil
 }
@@ -130,7 +134,7 @@ func appendToBatch(batch driver.Batch, deviceID string, indoorTemperature float6
 		indoorDewpoint, outdoorDewpoint, dewpointDelta,
 		keepWindows, humidityAlert,
 		time.Now().Format("2006-01-02 15:04:05")); err != nil {
-		return fmt.Errorf("failed to append data to batch: %w", err)
+		return fmt.Errorf("failed to append batch: %w", err)
 	}
 	return nil
 }
