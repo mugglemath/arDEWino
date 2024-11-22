@@ -17,6 +17,16 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: stable
+
+      - name: Install Wire
+        run: |
+          cd ./go/go-dew/cmd/server
+          go install github.com/google/wire/cmd/wire@latest
+      
+      - name: Generate Code with Wire
+        run: |
+          cd ./go/go-dew/cmd/server
+          wire
       
       - name: Run Go Tests
         run: |
