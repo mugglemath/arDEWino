@@ -131,8 +131,14 @@ func sendMessageWithAttachment(webHookUrl, message, filePath string) error {
 	writer := multipart.NewWriter(body)
 
 	part, _ := writer.CreateFormFile("file", filepath.Base(filePath))
-	io.Copy(part, file)
-	writer.WriteField("content", message)
+	_, err = io.Copy(part, file)
+	if err != nil {
+		return fmt.Errorf("failed to copy data: %v", err)
+	}
+
+	if err := writer.WriteField("content", message); err != nil {
+		return fmt.Errorf("failed to copy data: %v", err)
+	}
 	writer.Close()
 
 	req, _ := http.NewRequest("POST", webHookUrl, body)

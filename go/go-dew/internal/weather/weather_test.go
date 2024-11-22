@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -35,7 +36,11 @@ func TestGetOutdoorDewPoint(t *testing.T) {
 				},
 			},
 		}
-		json.NewEncoder(w).Encode(resp)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			log.Printf("Error encoding JSON response: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -129,7 +134,11 @@ func TestGetOutdoorDewPoint_EmptyDewPointValues(t *testing.T) {
 				},
 			},
 		}
-		json.NewEncoder(w).Encode(resp)
+		if err := json.NewEncoder(w).Encode(resp); err != nil {
+			log.Printf("Error encoding JSON response: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
 	}))
 	defer ts.Close()
 
@@ -185,7 +194,6 @@ func TestDewPointCalculator_InvalidTemperature(t *testing.T) {
 	temperature := -300.0
 	relativeHumidity := 60.0
 
-	DewPointCalculator(temperature, relativeHumidity)
 	_, err := DewPointCalculator(temperature, relativeHumidity)
 	if err == nil {
 		t.Errorf("DewpointCalculator did not return an error for invalid temperature")
