@@ -1,0 +1,24 @@
+name: Go Test
+
+on:
+  workflow_run:
+    workflows: ["Go Lint"]
+    types:
+      - completed
+
+jobs:
+  test:
+    name: Run Go Tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}  # Only run if linting was successful
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      
+      - name: Run Go Tests
+        run: |
+          cd ./go/go-dew/
+          go test ./...
