@@ -1,0 +1,37 @@
+name: golangci-lint
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+
+permissions:
+  contents: read
+  # Optional: allow read access to pull request. Use with `only-new-issues` option.
+  # pull-requests: read
+
+jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Install Wire
+        run: |
+          cd ./go/go-dew/cmd/server
+          go install github.com/google/wire/cmd/wire@latest
+      
+      - name: Generate Code with Wire
+        run: |
+          cd ./go/go-dew/cmd/server
+          wire
+      
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.60
+          working-directory: ./go/go-dew/cmd/server
