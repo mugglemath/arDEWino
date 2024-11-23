@@ -12,8 +12,8 @@ on:
       - 'rust/arDEWino-rs/**'
 
 jobs:
-  lint:
-    name: Run Clippy
+  lint-test-build:
+    name: lint-test-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,33 +24,13 @@ jobs:
 
       - name: Run Clippy
         run: |
-          cd rust/arDEWino-rs
+          cd ./rust/arDEWino-rs
           cargo clippy --all-features -- -D warnings
-
-  test:
-    name: Run Cargo Tests
-    runs-on: ubuntu-latest
-    needs: lint
-    if: ${{ needs.lint.result == 'success' }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-
       - name: Run Tests
         run: |
-          cd rust/arDEWino-rs
+          cd ./rust/arDEWino-rs
           cargo test --all-features
-
-  build:
-    name: Build Rust Project
-    runs-on: ubuntu-latest
-    needs: test
-    if: ${{ needs.test.result == 'success' }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-
       - name: Build the Rust Project
         run: |
-          cd rust/arDEWino-rs
+          cd ./rust/arDEWino-rs
           cargo build --all-features --release
