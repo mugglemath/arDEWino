@@ -39,8 +39,10 @@ jobs:
       
       - name: Run Go Tests
         run: |
+          cd ./go/go-dew
           go test ./...
 
       - name: Build the Go Project
         run: |
+          cd ./go/go-dew
           go build -o go-dew-app
