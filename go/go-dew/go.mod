@@ -5,7 +5,6 @@ go 1.23.3
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.30.0
 	github.com/gin-gonic/gin v1.10.0
-	github.com/google/wire v0.6.0
 	github.com/joho/godotenv v1.5.1
 	github.com/stretchr/testify v1.9.0
 )

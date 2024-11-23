@@ -24,7 +24,7 @@ func New(conn clickhouse.Conn) Client {
 	return &clientImpl{Conn: conn}
 }
 
-func ConnectToClickHouse(addr []string, username, password string) (Client, error) {
+func ConnectToClickHouse(addr []string, username, password string) (clickhouse.Conn, Client, error) {
 	conn, err := clickhouse.Open(&clickhouse.Options{
 		Addr: []string{addr[0]},
 		Auth: clickhouse.Auth{
@@ -33,10 +33,10 @@ func ConnectToClickHouse(addr []string, username, password string) (Client, erro
 		},
 	})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	fmt.Println("Successfully connected to ClickHouse!")
-	return &clientImpl{conn}, nil
+	return conn, &clientImpl{conn}, nil
 }
 
 func (c *clientImpl) InsertSensorFeedData(ctx context.Context, sensorData model.SensorData) error {

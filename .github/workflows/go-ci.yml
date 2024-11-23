@@ -21,16 +21,6 @@ jobs:
         with:
           go-version: stable
       
-      - name: Install Wire
-        run: |
-          cd ./go/go-dew/cmd/server
-          go install github.com/google/wire/cmd/wire@latest
-      
-      - name: Generate Code with Wire
-        run: |
-          cd ./go/go-dew/cmd/server
-          wire
-      
       - name: Run GolangCI-Lint
         uses: golangci/golangci-lint-action@v6
         with:

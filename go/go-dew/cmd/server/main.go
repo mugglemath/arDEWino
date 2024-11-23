@@ -16,7 +16,6 @@ import (
 	"github.com/mugglemath/go-dew/internal/weather"
 )
 
-// TODO: dependency injection overkill for a project this size, consider removing it
 func init() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
 }
@@ -34,16 +33,29 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	// initialize clients
-	discord := ProvideDiscordClient(*config)
-	handler, err := InitializeApp(*config)
+	conn, client, err := db.ConnectToClickHouse([]string{"localhost:9000"}, "default", "")
+	if err != nil {
+		log.Fatalf("failed to connect to db: %s", err)
+	}
+	defer conn.Close()
+
+	weatherClient := weather.NewClient(config.Office, config.GridX, config.GridY, config.NWSUserAgent)
+
+	discordClient := discord.New(&discord.Config{
+		SensorFeedWebhook:    config.DiscordSensorFeedWebhookURL,
+		WindowAlertWebhook:   config.DiscordWindowAlertWebhookURL,
+		HumidityAlertWebhook: config.DiscordHumidityAlertWebhookURL,
+		DebugWebhook:         config.DiscordDebugWebhookURL,
+	})
+
+	handler := handler.New(client, discordClient, weatherClient)
 	if err != nil {
 		log.Fatalf("failed to initialize app: %s", err)
 	}
 
+	// start server
 	r := gin.Default()
-
-	SetPanicRecoveryMiddleware(r, discord.PanicHandler)
-
+	SetPanicRecoveryMiddleware(r, discordClient.PanicHandler)
 	r.GET("/weather/outdoor-dewpoint", handler.HandleOutdoorDewpoint)
 	r.POST("/arduino/sensor-feed", handler.HandleSensorData)
 
@@ -74,25 +86,4 @@ func SetPanicRecoveryMiddleware(r *gin.Engine, fn RecoveryFn) {
 		}()
 		c.Next()
 	})
-}
-
-func ProvideDB(config Config) (db.Client, error) {
-	return db.ConnectToClickHouse([]string{"localhost:9000"}, "default", "")
-}
-
-func ProvideWeatherClient(config Config) weather.Client {
-	return weather.NewClient(config.Office, config.GridX, config.GridY, config.NWSUserAgent)
-}
-
-func ProvideDiscordClient(config Config) discord.Client {
-	return discord.New(&discord.Config{
-		SensorFeedWebhook:    config.DiscordSensorFeedWebhookURL,
-		WindowAlertWebhook:   config.DiscordWindowAlertWebhookURL,
-		HumidityAlertWebhook: config.DiscordHumidityAlertWebhookURL,
-		DebugWebhook:         config.DiscordDebugWebhookURL,
-	})
-}
-
-func ProvideHandler(conn db.Client, discordClient discord.Client, weatherClient weather.Client) handler.Handler {
-	return handler.New(conn, discordClient, weatherClient)
 }
