@@ -47,7 +47,7 @@ func main() {
 	r.POST("/arduino/sensor-feed", handler.HandleSensorData)
 
 	go func() {
-		if err := r.Run(":5555"); err != nil {
+		if err := r.Run(":5000"); err != nil {
 			log.Fatalf("failed to run server: %v", err)
 		}
 	}()
