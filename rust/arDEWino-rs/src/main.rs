@@ -15,6 +15,7 @@ use calculations::calculate_dewpoint;
 use usb::UsbCommunication;
 
 // TODO: refactor for concurrency
+// TODO: consider removing USB support
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let start_time_program = Instant::now();
