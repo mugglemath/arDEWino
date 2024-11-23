@@ -1,5 +1,0 @@
-*.h linguist-vendored=true
-*.cpp linguist-vendored=true
-*.cmake linguist-vendored=true
-CMakeLists.txt linguist-vendored=true
-*.py linguist-vendored=true
