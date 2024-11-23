@@ -1,0 +1,19 @@
+FROM rust:latest
+
+# Set the working directory
+WORKDIR /usr/src/app
+
+# Install the udev and OpenSSL development packages
+RUN apt-get update && apt-get install -y libudev-dev
+
+# Copy the entire rust directory
+COPY ./rust/arDEWino-rs .
+
+# Build dependencies
+RUN cargo build --release
+
+# Set an environment variable for the interval (default to 60 seconds)
+ENV INTERVAL=60
+
+# Run the application
+CMD ["./run_with_interval.sh"]

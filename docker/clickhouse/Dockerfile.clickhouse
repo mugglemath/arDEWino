@@ -11,7 +11,7 @@ RUN chmod 644 /docker-entrypoint-initdb.d/*.sql
 VOLUME ["/var/lib/clickhouse", "/var/log/clickhouse-server"]
 
 # Expose ClickHouse ports
-EXPOSE 8123 9000
+EXPOSE 8124 9001
 
 # Set ulimits
 CMD ["bash", "-c", "ulimit -n 262144 && /entrypoint.sh"]

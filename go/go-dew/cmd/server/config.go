@@ -8,6 +8,8 @@ import (
 )
 
 type Config struct {
+	Latitude     string
+	Longitude    string
 	Office       string
 	GridX        string
 	GridY        string
@@ -26,6 +28,8 @@ func NewConfig() (*Config, error) {
 	}
 	var config Config
 
+	config.Latitude = os.Getenv("LATITUDE")
+	config.Longitude = os.Getenv("LONGITUDE")
 	config.Office = os.Getenv("OFFICE")
 	config.GridX = os.Getenv("GRID_X")
 	config.GridY = os.Getenv("GRID_Y")

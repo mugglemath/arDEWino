@@ -6,7 +6,7 @@ const char* SSID = "<your-router-ssid>";
 const char* PASSWORD = "your-router-password";
 const uint8_t SHT31_I2C_ADDRESS = 0x44;
 const int BLINK_DURATION = 500;
-const int NUM_READINGS = 6;
+const int NUM_READINGS = 48;
 const long INTERVAL = 10000;
 
 bool ledState = false;

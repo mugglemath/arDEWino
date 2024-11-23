@@ -18,6 +18,7 @@ type Client interface {
 	InsertSensorFeedData(ctx context.Context, sensorData model.SensorData) error
 	GetLastKeepWindowsValue(ctx context.Context) (string, error)
 	CheckRecentHumidityAlert(ctx context.Context) (bool, error)
+	CheckForEmptyTable(ctx context.Context, tableName string) (bool, error)
 }
 
 func New(conn clickhouse.Conn) Client {
@@ -83,7 +84,7 @@ func (c *clientImpl) GetLastKeepWindowsValue(ctx context.Context) (string, error
 	var lastKeepWindows string
 	err := c.QueryRow(ctx, query).Scan(&lastKeepWindows)
 	if err != nil {
-		return "", fmt.Errorf("failed to retrieve last humidity value: %w", err)
+		return "", fmt.Errorf("failed to retrieve last keep windows value: %w", err)
 	}
 	return lastKeepWindows, nil
 }
@@ -102,6 +103,17 @@ func (c *clientImpl) CheckRecentHumidityAlert(ctx context.Context) (bool, error)
 	}
 
 	return alertExists, nil
+}
+
+func (c *clientImpl) CheckForEmptyTable(ctx context.Context, tableName string) (bool, error) {
+	query := fmt.Sprintf("SELECT 1 FROM my_database.%s LIMIT 1", tableName)
+	rows, err := c.Query(ctx, query)
+	if err != nil {
+		return false, fmt.Errorf("error checking db's table size: %w", err)
+	}
+	defer rows.Close()
+
+	return !rows.Next(), nil
 }
 
 func createBatch(conn clickhouse.Conn) (driver.Batch, error) {

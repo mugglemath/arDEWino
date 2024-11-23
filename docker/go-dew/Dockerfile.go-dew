@@ -1,0 +1,16 @@
+FROM golang:latest
+
+# Set the working directory
+WORKDIR /go/src/app
+
+# Copy go.mod and go.sum files
+COPY ./go/go-dew .
+
+# Download dependencies
+RUN go mod download
+
+# Build the application
+RUN go build -o go-dew-app ./cmd/server 
+
+# Run the application
+CMD ["./go-dew-app"]

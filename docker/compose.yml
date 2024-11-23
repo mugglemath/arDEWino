@@ -1,0 +1,82 @@
+services:
+  ardewino-rs:
+    build:
+      context: ..
+      dockerfile: docker/ardewino-rs/Dockerfile.ardewino-rs
+    env_file:
+        - ../rust/arDEWino-rs/.env
+    environment:
+        # INTERVAL is how often, in seconds, arDEWino-rs requests data from the Arduino
+        # the Arduino itself keeps a simple moving average of readings over 480 seconds
+        # set INTERVAL to how many data points you want in your dashboard (i.e. 60/hr)
+        - INTERVAL=60
+    # environment:
+    # example environment variables
+      # - ARDUINO_PORT=/dev/ttyUSB0
+      # - ARDUINO_IP=http://10.0.0.123
+      # - GET_URL=http://go-dew:5000/weather/outdoor-dewpoint
+      # - POST_URL_SENSOR_FEED=http://go-dew:5000/arduino/sensor-feed
+    container_name: ardewino-rs
+    restart: unless-stopped
+  
+  go-dew:
+    build:
+      context: ..
+      dockerfile: docker/go-dew/Dockerfile.go-dew
+    env_file:
+        - ../go/go-dew/.env
+    # environment:
+      # example environment variables
+      # if lat/long are set, don't worry about office, grid_x, or grid_y
+      # - LATITUDE=40.73
+      # - LONGITUDE=-73.95
+      # - OFFICE=ABC
+      # - GRID_X=123
+      # - GRID_Y=456
+      # - NWS_USER_AGENT=can-be-any-string
+      # - DISCORD_SENSOR_FEED_WEBHOOK_URL=https://discord.com/api/webhooks/...
+      # - DISCORD_WINDOW_ALERT_WEBHOOK_URL=https://discord.com/api/webhooks/...
+      # - DISCORD_HUMIDITY_ALERT_WEBHOOK_URL=https://discord.com/api/webhooks/...
+      # - DISCORD_DEBUG_WEBHOOK_URL=https://discord.com/api/webhooks/...
+    depends_on:
+        - ardewino-rs
+    container_name: go-dew
+    expose:
+        - '5000'
+    restart: unless-stopped
+
+  clickhouse:
+    build:
+        context: ..
+        dockerfile: docker/clickhouse/Dockerfile.clickhouse
+    container_name: clickhouse-dev
+    restart: unless-stopped
+    volumes:
+      - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../db/clickhouse/schema.sql:/docker-entrypoint-initdb.d/schema.sql
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+    expose:
+      - '8123'
+      - '9000'
+    command: bash -c "ulimit -n 262144 && /entrypoint.sh"
+
+  grafana:
+    image: grafana/grafana-oss
+    container_name: grafana-dev
+    restart: unless-stopped
+    depends_on:
+      - go-dew
+      - clickhouse
+    environment:
+      - GF_SERVER_ROOT_URL=http://grafana.server/
+      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
+    ports:
+      - '3000:3000'
+    volumes:
+      - grafana_storage:/var/lib/grafana
+
+volumes:
+  clickhouse_data:
+  clickhouse_logs:
+  grafana_storage:

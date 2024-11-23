@@ -134,7 +134,7 @@ func TestGetLastKeepWindowsValue_Error(t *testing.T) {
 	res, err := client.GetLastKeepWindowsValue(context.TODO())
 
 	assert.Equal(t, "", res)
-	assert.Equal(t, "failed to retrieve last humidity value: error in Scan", err.Error())
+	assert.Equal(t, "failed to retrieve last keep windows value: error in Scan", err.Error())
 }
 
 func TestInsertSensorFeedData(t *testing.T) {

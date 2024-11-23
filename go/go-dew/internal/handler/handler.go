@@ -47,6 +47,22 @@ func (h *handlerImpl) HandleSensorData(ctx *gin.Context) {
 		return
 	}
 
+	// if database is empty, initialize it
+	empty, err := h.dbClient.CheckForEmptyTable(ctx, "indoor_environment")
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check row count"})
+		return
+	}
+
+	if empty {
+		if err := h.dbClient.InsertSensorFeedData(ctx, data); err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to initialize database with initial row"})
+			return
+		}
+		ctx.JSON(http.StatusOK, gin.H{"status": "success", "message": "Database initialized with first entry", "data": data})
+		return
+	}
+
 	// send Discord feed if it's time
 	now := time.Now()
 	if now.Minute() == 0 {
@@ -75,7 +91,6 @@ func (h *handlerImpl) HandleSensorData(ctx *gin.Context) {
 	}
 
 	// handle humidity alert
-	fmt.Printf("indoor_humidity: %f", data.IndoorHumidity)
 	if data.IndoorHumidity > 60.0 {
 		recentHumidityAlert, err := h.dbClient.CheckRecentHumidityAlert(ctx)
 		fmt.Printf("recent humidity alert: %t", recentHumidityAlert)

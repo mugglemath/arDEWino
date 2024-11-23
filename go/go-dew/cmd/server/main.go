@@ -33,7 +33,7 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	// initialize clients
-	conn, client, err := db.ConnectToClickHouse([]string{"localhost:9000"}, "default", "")
+	conn, dbClient, err := db.ConnectToClickHouse([]string{"clickhouse-dev:9000"}, "default", "")
 	if err != nil {
 		log.Fatalf("failed to connect to db: %s", err)
 	}
@@ -48,7 +48,7 @@ func main() {
 		DebugWebhook:         config.DiscordDebugWebhookURL,
 	})
 
-	handler := handler.New(client, discordClient, weatherClient)
+	handler := handler.New(dbClient, discordClient, weatherClient)
 	if err != nil {
 		log.Fatalf("failed to initialize app: %s", err)
 	}
