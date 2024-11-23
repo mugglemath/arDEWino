@@ -44,5 +44,5 @@ jobs:
 
       - name: Build the Go Project
         run: |
-          cd ./go/go-dew
+          cd ./go/go-dew/cmd/server
           go build -o go-dew-app
