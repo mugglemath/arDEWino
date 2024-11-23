@@ -12,8 +12,8 @@ on:
       - 'go/go-dew/**'
 
 jobs:
-  golangci-lint:
-    name: Run GolangCI-Lint
+  lint-test-build:
+    name: lint-test-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,57 +36,11 @@ jobs:
         with:
           version: v1.60
           working-directory: ./go/go-dew/cmd/server
-
-  go-test:
-    name: Run Go Tests
-    runs-on: ubuntu-latest
-    needs: golangci-lint
-    if: ${{ needs.golangci-lint.result == 'success' }}
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-go@v5
-        with:
-          go-version: stable
-      
-      - name: Install Wire
-        run: |
-          cd ./go/go-dew/cmd/server
-          go install github.com/google/wire/cmd/wire@latest
-      
-      - name: Generate Code with Wire
-        run: |
-          cd ./go/go-dew/cmd/server
-          wire
       
       - name: Run Go Tests
         run: |
-          cd ./go/go-dew/cmd/server
           go test ./...
 
-  go-build:
-    name: Build Go Project
-    runs-on: ubuntu-latest
-    needs: go-test
-    if: ${{ needs.go-test.result == 'success' }}
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: actions/setup-go@v5
-        with:
-          go-version: stable
-
-      - name: Install Wire
-        run: |
-          cd ./go/go-dew/cmd/server
-          go install github.com/google/wire/cmd/wire@latest
-      
-      - name: Generate Code with Wire
-        run: |
-          cd ./go/go-dew/cmd/server
-          wire
-      
       - name: Build the Go Project
         run: |
-          cd ./go/go-dew/cmd/server
-          go build -o myapp
+          go build -o go-dew-app
