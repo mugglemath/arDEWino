@@ -16,7 +16,7 @@ import (
 	"github.com/mugglemath/go-dew/internal/weather"
 )
 
-// TODO: dependency injection overkill for a project this size consider removing it
+// TODO: dependency injection overkill for a project this size, consider removing it
 func init() {
 	log.SetFlags(log.Lshortfile | log.LstdFlags)
 }
