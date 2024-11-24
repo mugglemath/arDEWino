@@ -28,12 +28,12 @@ services:
         - ../go/go-dew/.env
     # environment:
     #   # example environment variables
-    #   # if lat/long are set, don't worry about office, grid_x, or grid_y
+    #   # must have either {LATITUDE, LONGITUDE} or {OFFICE, GRID_X, GRID_Y}
     #   - LATITUDE=40.73
     #   - LONGITUDE=-73.95
     #   - OFFICE=ABC
-    #   - GRID_X=123
-    #   - GRID_Y=456
+    #   - GRID_X=111
+    #   - GRID_Y=22
     #   - NWS_USER_AGENT=can-be-any-string
     #   - DISCORD_SENSOR_FEED_WEBHOOK_URL=https://discord.com/api/webhooks/...
     #   - DISCORD_WINDOW_ALERT_WEBHOOK_URL=https://discord.com/api/webhooks/...

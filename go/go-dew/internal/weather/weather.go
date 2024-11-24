@@ -20,6 +20,24 @@ type clientImpl struct {
 	userAgent  string
 }
 
+type GridResponse struct {
+	Properties struct {
+		Dewpoint struct {
+			Values []struct {
+				Value float64 `json:"value"`
+			} `json:"values"`
+		} `json:"dewpoint"`
+	} `json:"properties"`
+}
+
+type PointResponse struct {
+	Properties struct {
+		Office string `json:"gridId"`
+		GridX  int    `json:"gridX"`
+		GridY  int    `json:"gridY"`
+	} `json:"properties"`
+}
+
 func NewClient(office, gridX, gridY, userAgent string) *clientImpl {
 	baseURL := fmt.Sprintf("https://api.weather.gov/gridpoints/%s/%s,%s", office, gridX, gridY)
 	return &clientImpl{
@@ -29,23 +47,34 @@ func NewClient(office, gridX, gridY, userAgent string) *clientImpl {
 	}
 }
 
-func NewClientFromLatLong(latitude, longitude, userAgent string) *clientImpl {
+func GetGridData(latitude, longitude, userAgent string) (string, int, int, error) {
 	baseURL := fmt.Sprintf("https://api.weather.gov/points/%s,%s", latitude, longitude)
-	return &clientImpl{
-		httpClient: &http.Client{Timeout: 10 * time.Second},
-		baseURL:    baseURL,
-		userAgent:  userAgent,
-	}
-}
 
-type WeatherResponse struct {
-	Properties struct {
-		Dewpoint struct {
-			Values []struct {
-				Value float64 `json:"value"`
-			} `json:"values"`
-		} `json:"dewpoint"`
-	} `json:"properties"`
+	req, err := http.NewRequest("GET", baseURL, nil)
+	if err != nil {
+		return "", 0, 0, err
+	}
+
+	req.Header.Add("User-Agent", userAgent)
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", 0, 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", 0, 0, fmt.Errorf("error fetching grid data: %d", resp.StatusCode)
+	}
+
+	var pointResponse PointResponse
+	err = json.NewDecoder(resp.Body).Decode(&pointResponse)
+	if err != nil {
+		return "", 0, 0, err
+	}
+
+	return pointResponse.Properties.Office, pointResponse.Properties.GridX, pointResponse.Properties.GridY, nil
 }
 
 func (c *clientImpl) GetOutdoorDewPoint(ctx context.Context) (float64, error) {
@@ -67,7 +96,7 @@ func (c *clientImpl) GetOutdoorDewPoint(ctx context.Context) (float64, error) {
 		return 0, fmt.Errorf("error fetching weather data: %d", resp.StatusCode)
 	}
 
-	var response WeatherResponse
+	var response GridResponse
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
 		return 0, err
@@ -81,7 +110,7 @@ func (c *clientImpl) GetOutdoorDewPoint(ctx context.Context) (float64, error) {
 }
 
 // uses Magnus-Tetens formula for dew point
-func DewPointCalculator(temperature, relativeHumidity float64) (float64, error) {
+func dewPointCalculator(temperature, relativeHumidity float64) (float64, error) {
 	if temperature < -273.15 {
 		return temperature, errors.New("temperature must be greater than or equal to -273.15")
 	}

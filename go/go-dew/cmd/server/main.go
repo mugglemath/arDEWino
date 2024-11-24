@@ -33,7 +33,7 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	// initialize clients
-	conn, dbClient, err := db.ConnectToClickHouse([]string{"clickhouse-dev:9000"}, "default", "")
+	conn, dbClient, err := db.ConnectToClickHouse([]string{"clickhouse:9000"}, "default", "")
 	if err != nil {
 		log.Fatalf("failed to connect to db: %s", err)
 	}

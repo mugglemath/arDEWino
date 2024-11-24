@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/mugglemath/go-dew/internal/weather"
 )
 
 type Config struct {
@@ -38,5 +40,23 @@ func NewConfig() (*Config, error) {
 	config.DiscordWindowAlertWebhookURL = os.Getenv("DISCORD_WINDOW_ALERT_WEBHOOK_URL")
 	config.DiscordHumidityAlertWebhookURL = os.Getenv("DISCORD_HUMIDITY_ALERT_WEBHOOK_URL")
 	config.DiscordDebugWebhookURL = os.Getenv("DISCORD_DEBUG_WEBHOOK_URL")
+
+	hasLatLong := config.Latitude != "" && config.Longitude != ""
+	hasOfficeGrid := config.Office != "" && config.GridX != "" && config.GridY != ""
+
+	if !hasLatLong && !hasOfficeGrid {
+		return nil, fmt.Errorf("must provide either {LATITUDE, LONGITUDE} or {OFFICE, GRID_X, GRID_Y}")
+	}
+
+	if !hasOfficeGrid {
+		office, gridX, gridY, err := weather.GetGridData(config.Latitude, config.Longitude, config.NWSUserAgent)
+		if err != nil {
+			log.Fatal("Error retrieving grid data:", err)
+		}
+		config.Office = office
+		config.GridX = fmt.Sprintf("%d", gridX)
+		config.GridY = fmt.Sprintf("%d", gridY)
+	}
+
 	return &config, nil
 }

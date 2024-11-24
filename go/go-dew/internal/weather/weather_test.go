@@ -15,7 +15,7 @@ func TestGetOutdoorDewPoint(t *testing.T) {
 	// create a test server
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// return a mock response
-		resp := WeatherResponse{
+		resp := GridResponse{
 			Properties: struct {
 				Dewpoint struct {
 					Values []struct {
@@ -115,7 +115,7 @@ func TestGetOutdoorDewPoint_JSONDecodeError(t *testing.T) {
 
 func TestGetOutdoorDewPoint_EmptyDewPointValues(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		resp := WeatherResponse{
+		resp := GridResponse{
 			Properties: struct {
 				Dewpoint struct {
 					Values []struct {
@@ -184,7 +184,7 @@ func TestDewPointCalculator_ValidInput(t *testing.T) {
 	temperature := 20.0
 	relativeHumidity := 60.0
 	expectedDewpoint := 11.99
-	actualDewpoint, _ := DewPointCalculator(temperature, relativeHumidity)
+	actualDewpoint, _ := dewPointCalculator(temperature, relativeHumidity)
 	if math.Abs(actualDewpoint-expectedDewpoint) > 0.01 {
 		t.Errorf("DewpointCalculator returned an unexpected dew point: %f, expected %f", actualDewpoint, expectedDewpoint)
 	}
@@ -194,7 +194,7 @@ func TestDewPointCalculator_InvalidTemperature(t *testing.T) {
 	temperature := -300.0
 	relativeHumidity := 60.0
 
-	_, err := DewPointCalculator(temperature, relativeHumidity)
+	_, err := dewPointCalculator(temperature, relativeHumidity)
 	if err == nil {
 		t.Errorf("DewpointCalculator did not return an error for invalid temperature")
 	}
@@ -204,7 +204,7 @@ func TestDewPointCalculator_InvalidRelativeHumidity(t *testing.T) {
 	temperature := 20.0
 	relativeHumidity := -10.0
 
-	_, err := DewPointCalculator(temperature, relativeHumidity)
+	_, err := dewPointCalculator(temperature, relativeHumidity)
 	if err == nil {
 		t.Errorf("DewpointCalculator did not return an error for invalid relative humidity")
 	}
@@ -222,7 +222,7 @@ func TestDewPointCalculator_EdgeCases(t *testing.T) {
 		{20, 100, 20},
 	}
 	for _, test := range tests {
-		actualDewpoint, err := DewPointCalculator(test.temperature, test.relativeHumidity)
+		actualDewpoint, err := dewPointCalculator(test.temperature, test.relativeHumidity)
 		if err != nil {
 			if test.relativeHumidity == 0 {
 				continue
@@ -239,7 +239,7 @@ func TestDewPointCalculator_NaNInput(t *testing.T) {
 	temperature := math.NaN()
 	relativeHumidity := 60.0
 
-	_, err := DewPointCalculator(temperature, relativeHumidity)
+	_, err := dewPointCalculator(temperature, relativeHumidity)
 	if err == nil {
 		t.Errorf("DewpointCalculator did not return an error for a NaN temperature")
 	}
