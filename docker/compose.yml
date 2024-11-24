@@ -2,11 +2,14 @@ name: arDEWino-dev
 
 services:
   ardewino-rs:
+    # image: ardewino-rs:${VERSION} # use for version tagging
     build:
       context: ..
       dockerfile: docker/ardewino-rs/Dockerfile.ardewino-rs
     env_file:
         - ../rust/arDEWino-rs/.env
+    # volumes:
+    #   - ../rust/arDEWino-rs/src:/usr/src/app/src             # bind mount for live code updates
     environment:
         # INTERVAL is how often, in seconds, arDEWino-rs requests data from the Arduino
         # the Arduino itself keeps a simple moving average of readings over 480 seconds
@@ -21,11 +24,16 @@ services:
     restart: unless-stopped
   
   go-dew:
+    # image: go-dew:${VERSION} # use for version tagging
     build:
       context: ..
       dockerfile: docker/go-dew/Dockerfile.go-dew
     env_file:
         - ../go/go-dew/.env
+    # volumes:
+    #   - ../go/go-dew/cmd:/go/src/app/cmd                     # bind mount for live code updates
+    #   - ../go/go-dew/internal:/go/src/app/internal
+    #   - ../go/go-dew/mocks:/go/src/app/mocks
     # environment:
     #   # example environment variables
     #   # must have either {LATITUDE, LONGITUDE} or {OFFICE, GRID_X, GRID_Y}
@@ -46,6 +54,7 @@ services:
     restart: unless-stopped
 
   clickhouse:
+    # image: clickhouse:${VERSION} # use for version tagging
     build:
         context: ..
         dockerfile: docker/clickhouse/Dockerfile.clickhouse
