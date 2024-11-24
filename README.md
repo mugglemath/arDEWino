@@ -31,7 +31,7 @@ arDEWino can notify users when the outdoor dew point is higher than the indoor d
 > [!NOTE]
 > *ClickHouse and Grafana are included as Docker images
 
-### Setup
+### Local Setup
 1. Connect sensor to microcontroller (use jumper cables to an Arduino with headers if you don't want to solder)
 2. Set the SSID and Password variables in [arduino/sketches/nano_esp32_usb_wifi.ino](/arduino/sketches/nano_esp32_usb_wifi.ino)
 3. Upload this sketch file with your WiFi information to your Arduino using Arduino IDE
@@ -52,3 +52,6 @@ Google Maps: (40.74867,-73.98628)                LONGITUDE=-73.98628
 > [Here is how you generate and use Discord webhook URLs](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
 5. Change into the docker directory and run `docker compose up -d`
 6. Open `localhost:3000` in your web browser
+
+> [!WARNING]
+> This application is in early development and uses default passwords. Do not deploy on the internet or use in production.
