@@ -16,31 +16,39 @@ arDEWino can notify users when the outdoor dew point is higher than the indoor d
   * Retrieves sensor data from Arduino over WiFi/USB
 * go-dew:
   * REST API that handles outdoor weather information, sending Discord notifications/alerts, and the database
-* Clickhouse:
-  * Columnar database optimized for analytics
-* Grafana:
-  * Open source interactive visualization and monitoring web app that connects to your database
+* [ClickHouse](https://clickhouse.com):
+  * Open source columnar database optimized for analytics
+* [Grafana](https://grafana.com):
+  * Open source interactive visualization and monitoring web app that connects to your data sources
 
-## TODO
-### Hardware
-* Figure out alternative battery solution
-  * (Anker PowerCore 5000 not working. Portable power banks shutdown if not enough current drawn) 
-* Measure power consumption
+## How to Use
 
-### Software
-CI / CD after tests are written
+### Requirements
+* Arduino Nano ESP32 Microcontroller
+* SHT31 Temperature/Humidity Sensor
+* Arduino IDE
+* *Docker
+> [!NOTE]
+> *ClickHouse and Grafana are included as Docker images
 
-#### Arduino
-* Power consumption logging?
-* Figure out sleeps/interrupts
+### Setup
+1. Connect sensor to microcontroller (use jumper cables to an Arduino with headers if you don't want to solder)
+2. Set the SSID and Password variables in [arduino/sketches/nano_esp32_usb_wifi.ino](/arduino/sketches/nano_esp32_usb_wifi.ino)
+3. Upload this sketch file with your WiFi information to your Arduino using Arduino IDE
+4. Set the environment variables in `docker/compose.yml` or use the `env_file:` directive with .env files in their respective directories
 
-#### Go App
-* Unit tests
-* Log power usage over time
+> [!IMPORTANT]  
+> arDEWino uses the National Weather Service API to retrieve the outdoor dewpoint nearest you using *decimal degrees*.
+> When you drop a pin, the format can vary depending on the mapping application.
+> NWS requires values like the Google Maps format which includes the negative sign.
 
-#### Rust App
-* Unit tests
-* Refactor for concurrency
+```
+Map App:                                         Environment Variables:
 
-#### Add a visualization dashboard service (e.g. Grafana)
-* Graph energy consumption
+Apple Maps: 40.74867° N,73.98628° W              LATITUDE=40.74867
+Google Maps: (40.74867,-73.98628)                LONGITUDE=-73.98628
+```
+> [!TIP]
+> [Here is how you generate and use Discord webhook URLs](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
+5. Change into the docker directory and run `docker compose up -d`
+6. Open `localhost:3000` in your web browser
