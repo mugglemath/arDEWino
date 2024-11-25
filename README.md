@@ -27,9 +27,7 @@ arDEWino can notify users when the outdoor dew point is higher than the indoor d
 * Arduino Nano ESP32 Microcontroller
 * SHT31 Temperature/Humidity Sensor
 * Arduino IDE
-* *Docker
-> [!NOTE]
-> *ClickHouse and Grafana are included as Docker images
+* Docker
 
 ### Local Setup
 1. Connect sensor to microcontroller (use jumper cables to an Arduino with headers if you don't want to solder)
@@ -54,4 +52,4 @@ Google Maps: (40.74867,-73.98628)                LONGITUDE=-73.98628
 6. Open `localhost:3000` in your web browser
 
 > [!WARNING]
-> This application is in early development and uses default passwords. Do not deploy on the internet or use in production.
+> ClickHouse and Grafana come with default usernames and passwords. Change before deploying.
