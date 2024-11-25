@@ -80,10 +80,17 @@ impl UsbCommunication {
         let command = "d";
         let arduino_data = usb_comm.get_arduino_response(command, 50)?;
         let parts: Vec<&str> = arduino_data.split(',').collect();
-        let temperature: f64 = parts[0].trim().parse()?;
-        let humidity: f64 = parts[1].trim().parse()?;
-
+        
+        if parts.len() < 3 {
+            return Err("Invalid data format from Arduino".into());
+        }
+    
+        let device_id: u16 = parts[0].trim().parse()?;
+        let temperature: f64 = parts[1].trim().parse()?;
+        let humidity: f64 = parts[2].trim().parse()?;
+    
         Ok(IndoorSensorData {
+            device_id,
             temperature,
             humidity,
         })
@@ -105,10 +112,10 @@ impl UsbCommunication {
 }
 
 fn is_valid_response(response: &str) -> bool {
-    !response.is_empty() && (is_valid_float_format(response) || response == "a")
+    !response.is_empty() && (is_valid_data_format(response) || response == "a")
 }
 
-pub fn is_valid_float_format(input: &str) -> bool {
-    let float_pattern = Regex::new(r"^\d{2}\.\d{2},\d{2}\.\d{2}$").unwrap();
-    float_pattern.is_match(input)
+pub fn is_valid_data_format(input: &str) -> bool {
+    let pattern = Regex::new(r"^\d{1,5},\d{2}\.\d{2},\d{2}\.\d{2}$").unwrap();
+    pattern.is_match(input)
 }

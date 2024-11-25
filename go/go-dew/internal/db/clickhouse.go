@@ -138,7 +138,7 @@ func createBatch(conn clickhouse.Conn) (driver.Batch, error) {
 	return batch, nil
 }
 
-func appendToBatch(batch driver.Batch, deviceID string, indoorTemperature float64,
+func appendToBatch(batch driver.Batch, deviceID uint16, indoorTemperature float64,
 	indoorHumidity float64, indoorDewpoint float64, outdoorDewpoint float64,
 	dewpointDelta float64, keepWindows string, humidityAlert bool) error {
 

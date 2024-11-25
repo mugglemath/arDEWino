@@ -1,5 +1,5 @@
 CREATE TABLE indoor_environment (
-    device_id String,
+    device_id UInt16,
     indoor_temperature Float64,
     indoor_humidity Float64,
     indoor_dewpoint Float64,

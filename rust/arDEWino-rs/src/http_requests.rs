@@ -34,7 +34,6 @@ pub async fn get_outdoor_dewpoint() -> Result<f64, Box<dyn Error>> {
 
 pub fn prepare_sensor_feed_json(
     indoor_data: &IndoorSensorData,
-    device_id: String,
     indoor_dewpoint: f64,
     outdoor_dewpoint: f64,
     dewpoint_delta: f64,
@@ -42,7 +41,7 @@ pub fn prepare_sensor_feed_json(
     humidity_alert: bool,
 ) -> String {
     json!({
-        "device_id": device_id,
+        "device_id": indoor_data.device_id,
         "indoor_temperature": round_to_2_decimal_places(indoor_data.temperature),
         "indoor_humidity": round_to_2_decimal_places(indoor_data.humidity),
         "indoor_dewpoint": round_to_2_decimal_places(indoor_dewpoint),

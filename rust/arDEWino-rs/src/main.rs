@@ -55,16 +55,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     };
 
-    // initialize device_id based on mode
-    let device_id = if mode.as_str() == "usb" {
-        "Arduino Nano USB".to_string()
-    } else if mode.as_str() == "wifi" {
-        "Arduino Nano ESP32 WiFi".to_string()
-    } else {
-        eprintln!("Invalid mode: {}", mode);
-        std::process::exit(1);
-    };
-
     let outdoor_dewpoint = http_requests::get_outdoor_dewpoint().await?;
     let indoor_dewpoint = calculate_dewpoint(indoor_data.temperature, indoor_data.humidity);
     let dewpoint_delta = indoor_dewpoint - outdoor_dewpoint;
@@ -72,7 +62,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let humidity_alert = indoor_data.humidity > 60.0;
     let json_data_sensor_feed = http_requests::prepare_sensor_feed_json(
         &indoor_data,
-        device_id,
         indoor_dewpoint,
         outdoor_dewpoint,
         dewpoint_delta,
