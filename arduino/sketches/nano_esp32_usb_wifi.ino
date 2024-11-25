@@ -1,6 +1,8 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include "Adafruit_SHT31.h"
+#include <UUID.h>
+#include <Preferences.h>
 
 const char* SSID = "<your-router-ssid>";
 const char* PASSWORD = "your-router-password";
@@ -9,6 +11,8 @@ const int BLINK_DURATION = 500;
 const int NUM_READINGS = 48;
 const long INTERVAL = 10000;
 
+String uuidStr;
+uint16_t hash = 0;
 bool ledState = false;
 float temperatureReadings[NUM_READINGS];
 float humidityReadings[NUM_READINGS];
@@ -17,6 +21,7 @@ unsigned long previousMillis = 0;
 float humidityOffset = 0;
 float temperatureOffset = 0;
 
+Preferences preferences;
 Adafruit_SHT31 sht31 = Adafruit_SHT31();
 WebServer server(80);
 
@@ -47,7 +52,30 @@ void setup() {
     humidityReadings[i] = initialHumidity;
   }
 
-  server.on("/data", HTTP_GET, handleDataRequest);
+  // store UUID in flash memory
+  preferences.begin("uuid", false);
+  // check if UUID already exists
+  if (!preferences.isKey("uuid")) {
+    UUID uuidGenerate = UUID();
+    uuidGenerate.generate();
+    uuidStr = uuidGenerate.toCharArray();
+    preferences.putString("uuid", uuidStr);
+  } else {
+    uuidStr = preferences.getString("uuid");
+  }
+  preferences.end();
+
+  int len = uuidStr.length();
+  for (int i = 0; i < len; i++) {
+    hash = (hash * 31) + uuidStr[i];
+  }
+
+  Serial.print("UUID: ");
+  Serial.println(uuidStr);
+  Serial.print("Hash: ");
+  Serial.println(hash);
+
+  server.on("/data", HTTP_GET, handleDataRequestTwo);
   server.on("/led", HTTP_POST, handleLedRequest);
   server.begin();
 }
@@ -106,8 +134,8 @@ void handleSerialInput() {
 }
 
 void handleDataRequest() {
-  String message = String(averageTemperature()) + "," + String(averageHumidity()) + "\n";
-  server.send(200, "text/plain", message);
+    String message = String(hash) + "," + String(averageTemperature()) + "," + String(averageHumidity()) + "\n";
+    server.send(200, "text/plain", message);
 }
 
 void handleLedRequest() {

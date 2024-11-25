@@ -74,12 +74,12 @@ func TestCheckRecentHumidityAlert_True(t *testing.T) {
 	assert.Equal(t, nil, err)
 }
 
-func TestGetLastKeepWindowsValue_IsOpen(t *testing.T) {
+func TestGetLastOpenWindowsValue_True(t *testing.T) {
 	// setup mock
 	row := mockclickhouse.Row{}
 	row.SetScan(func(dest ...any) error {
-		lastKeepWindowsPtr := (dest[0]).(*string)
-		*lastKeepWindowsPtr = "Open"
+		lastOpenWindowsPtr := (dest[0]).(*bool)
+		*lastOpenWindowsPtr = true
 		return nil
 	})
 	conn := mockclickhouse.Conn{}
@@ -89,18 +89,18 @@ func TestGetLastKeepWindowsValue_IsOpen(t *testing.T) {
 
 	// test implementation
 	client := New(&conn)
-	res, err := client.GetLastKeepWindowsValue(context.TODO())
+	res, err := client.GetLastOpenWindowsValue(context.TODO())
 
-	assert.Equal(t, "Open", res)
+	assert.Equal(t, true, res)
 	assert.Equal(t, nil, err)
 }
 
-func TestGetLastKeepWindowsValue_IsClosed(t *testing.T) {
+func TestGetLastOpenWindowsValue_False(t *testing.T) {
 	// setup mock
 	row := mockclickhouse.Row{}
 	row.SetScan(func(dest ...any) error {
-		lastKeepWindowsPtr := (dest[0]).(*string)
-		*lastKeepWindowsPtr = "Closed"
+		lastOpenWindowsPtr := (dest[0]).(*bool)
+		*lastOpenWindowsPtr = false
 		return nil
 	})
 	conn := mockclickhouse.Conn{}
@@ -110,18 +110,18 @@ func TestGetLastKeepWindowsValue_IsClosed(t *testing.T) {
 
 	// test implementation
 	client := New(&conn)
-	res, err := client.GetLastKeepWindowsValue(context.TODO())
+	res, err := client.GetLastOpenWindowsValue(context.TODO())
 
-	assert.Equal(t, "Closed", res)
+	assert.Equal(t, false, res)
 	assert.Equal(t, nil, err)
 }
 
-func TestGetLastKeepWindowsValue_Error(t *testing.T) {
+func TestGetLastOpenWindowsValue_Error(t *testing.T) {
 	// setup mock
 	row := mockclickhouse.Row{}
 	row.SetScan(func(dest ...any) error {
-		lastKeepWindowsPtr := (dest[0]).(*string)
-		*lastKeepWindowsPtr = ""
+		lastOpenWindowsPtr := (dest[0]).(*bool)
+		*lastOpenWindowsPtr = false
 		return fmt.Errorf("error in Scan")
 	})
 	conn := mockclickhouse.Conn{}
@@ -131,9 +131,9 @@ func TestGetLastKeepWindowsValue_Error(t *testing.T) {
 
 	// test implementation
 	client := New(&conn)
-	res, err := client.GetLastKeepWindowsValue(context.TODO())
+	res, err := client.GetLastOpenWindowsValue(context.TODO())
 
-	assert.Equal(t, "", res)
+	assert.Equal(t, false, res)
 	assert.Equal(t, "failed to retrieve last keep windows value: error in Scan", err.Error())
 }
 
@@ -153,7 +153,7 @@ func TestInsertSensorFeedData(t *testing.T) {
 		assert.Equal(t, 10.0, args[3])
 		assert.Equal(t, 5.0, args[4])
 		assert.Equal(t, 2.0, args[5])
-		assert.Equal(t, "Open", args[6])
+		assert.Equal(t, true, args[6])
 		assert.Equal(t, true, args[7])
 		return nil
 	})
@@ -171,7 +171,7 @@ func TestInsertSensorFeedData(t *testing.T) {
 		IndoorDewpoint:    10.0,
 		OutdoorDewpoint:   5.0,
 		DewpointDelta:     2.0,
-		KeepWindows:       "Open",
+		OpenWindows:       true,
 		HumidityAlert:     true,
 	}
 	err := client.InsertSensorFeedData(context.TODO(), sensorData)
@@ -194,7 +194,7 @@ func TestInsertSensorFeedData_BatchCreationFail(t *testing.T) {
 		IndoorDewpoint:    10.0,
 		OutdoorDewpoint:   5.0,
 		DewpointDelta:     2.0,
-		KeepWindows:       "Open",
+		OpenWindows:       true,
 		HumidityAlert:     true,
 	}
 
@@ -229,7 +229,7 @@ func TestInsertSensorFeedData_BatchAppendFail(t *testing.T) {
 		IndoorDewpoint:    10.0,
 		OutdoorDewpoint:   5.0,
 		DewpointDelta:     2.0,
-		KeepWindows:       "Open",
+		OpenWindows:       true,
 		HumidityAlert:     true,
 	}
 	err := client.InsertSensorFeedData(context.TODO(), sensorData)
@@ -253,7 +253,7 @@ func TestInsertSensorFeedData_BatchSendFail(t *testing.T) {
 		assert.Equal(t, 10.0, args[3])
 		assert.Equal(t, 5.0, args[4])
 		assert.Equal(t, 2.0, args[5])
-		assert.Equal(t, "Open", args[6])
+		assert.Equal(t, true, args[6])
 		assert.Equal(t, true, args[7])
 		return nil
 	})
@@ -271,7 +271,7 @@ func TestInsertSensorFeedData_BatchSendFail(t *testing.T) {
 		IndoorDewpoint:    10.0,
 		OutdoorDewpoint:   5.0,
 		DewpointDelta:     2.0,
-		KeepWindows:       "Open",
+		OpenWindows:       true,
 		HumidityAlert:     true,
 	}
 	err := client.InsertSensorFeedData(context.TODO(), sensorData)

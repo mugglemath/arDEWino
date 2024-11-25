@@ -12,7 +12,7 @@ type SensorData struct {
 	IndoorDewpoint    float64 `json:"indoor_dewpoint"`
 	OutdoorDewpoint   float64 `json:"outdoor_dewpoint"`
 	DewpointDelta     float64 `json:"dewpoint_delta"`
-	KeepWindows       string  `json:"keep_windows"`
+	OpenWindows       bool    `json:"open_windows"`
 	HumidityAlert     bool    `json:"humidity_alert"`
 }
 
@@ -25,11 +25,11 @@ func (s *SensorData) FeedMessage() string {
 		"Indoor Dewpoint: %.2f C\n"+
 		"Outdoor Dewpoint: %.2f C\n"+
 		"Dewpoint Delta: %.2f C\n"+
-		"Keep Windows: %s\n"+
+		"Open Windows: %t\n"+
 		"Humidity Alert: %t",
 		isoTimestamp, s.DeviceID, s.IndoorTemperature, s.IndoorHumidity,
 		s.IndoorDewpoint, s.OutdoorDewpoint, s.DewpointDelta,
-		s.KeepWindows, s.HumidityAlert)
+		s.OpenWindows, s.HumidityAlert)
 }
 
 func (s *SensorData) WindowAlertMessage() string {
@@ -39,8 +39,8 @@ func (s *SensorData) WindowAlertMessage() string {
 		"Indoor Dewpoint: %.2f C\n"+
 		"Outdoor Dewpoint: %.2f C\n"+
 		"Dewpoint Delta: %.2f C\n"+
-		"Keep Windows: %s\n",
-		isoTimestamp, s.DeviceID, s.IndoorDewpoint, s.OutdoorDewpoint, s.DewpointDelta, s.KeepWindows)
+		"Open Windows: %t\n",
+		isoTimestamp, s.DeviceID, s.IndoorDewpoint, s.OutdoorDewpoint, s.DewpointDelta, s.OpenWindows)
 }
 
 func (s *SensorData) HumidityAlertMessage() string {

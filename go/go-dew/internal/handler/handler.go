@@ -48,7 +48,7 @@ func (h *handlerImpl) HandleSensorData(ctx *gin.Context) {
 	}
 
 	// if database is empty, initialize it
-	empty, err := h.dbClient.CheckForEmptyTable(ctx, "indoor_environment")
+	empty, err := h.dbClient.CheckForEmptyTable(ctx, "data")
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to check row count"})
 		return
@@ -73,13 +73,13 @@ func (h *handlerImpl) HandleSensorData(ctx *gin.Context) {
 	}
 
 	// handle window alert toggle
-	currentKeepWindows := data.KeepWindows
-	lastKeepWindows, err := h.dbClient.GetLastKeepWindowsValue(ctx)
+	currentOpenWindows := data.OpenWindows
+	lastOpenWindows, err := h.dbClient.GetLastOpenWindowsValue(ctx)
 	if err != nil {
 		fmt.Printf("failed to get last keep windows value: ")
 		return
 	}
-	if currentKeepWindows != lastKeepWindows {
+	if currentOpenWindows != lastOpenWindows {
 		if err := h.discordClient.SendSensorFeed(data.FeedMessage()); err != nil {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send sensor feed to Discord"})
 			return

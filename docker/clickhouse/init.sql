@@ -1,15 +1,15 @@
-CREATE DATABASE IF NOT EXISTS my_database;
-USE my_database;
+CREATE DATABASE IF NOT EXISTS dew;
+USE dew;
 
-CREATE TABLE indoor_environment (
+CREATE TABLE data (
     device_id UInt16,
-    indoor_temperature Float64,
-    indoor_humidity Float64,
-    indoor_dewpoint Float64,
-    outdoor_dewpoint Float64,
-    dewpoint_delta Float64,
-    keep_windows String,
+    indoor_temperature Float32,
+    indoor_humidity Float32,
+    indoor_dewpoint Float32,
+    outdoor_dewpoint Float32,
+    dewpoint_delta Float32,
+    open_windows UInt8,
     humidity_alert UInt8,
-    isoTimestamp DateTime DEFAULT now()
+    time DateTime DEFAULT now()
 ) ENGINE = MergeTree()
-ORDER BY (isoTimestamp, device_id);
+ORDER BY (time, device_id);

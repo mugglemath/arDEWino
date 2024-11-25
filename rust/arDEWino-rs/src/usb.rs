@@ -86,8 +86,8 @@ impl UsbCommunication {
         }
     
         let device_id: u16 = parts[0].trim().parse()?;
-        let temperature: f64 = parts[1].trim().parse()?;
-        let humidity: f64 = parts[2].trim().parse()?;
+        let temperature: f32 = parts[1].trim().parse()?;
+        let humidity: f32 = parts[2].trim().parse()?;
     
         Ok(IndoorSensorData {
             device_id,
@@ -98,9 +98,9 @@ impl UsbCommunication {
 
     pub fn toggle_warning_light(
         usb_comm: &mut UsbCommunication,
-        keep_windows: bool,
+        open_windows: bool,
     ) -> Result<(), Box<dyn Error>> {
-        if keep_windows {
+        if open_windows {
             usb_comm.get_arduino_response("0", 50)?;
             println!("Warning light OFF");
         } else {

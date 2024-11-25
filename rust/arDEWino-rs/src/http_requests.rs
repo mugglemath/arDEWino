@@ -23,21 +23,21 @@ pub async fn post_request(
     Ok(body)
 }
 
-pub async fn get_outdoor_dewpoint() -> Result<f64, Box<dyn Error>> {
+pub async fn get_outdoor_dewpoint() -> Result<f32, Box<dyn Error>> {
     let get_url = std::env::var("GET_URL")?;
     let get_response = crate::http_requests::get_request(&get_url).await?;
     println!("GET outdoor_dewpoint response: {}", get_response.trim());
     get_response
-        .parse::<f64>()
+        .parse::<f32>()
         .map_err(|_| "Invalid float format".into())
 }
 
 pub fn prepare_sensor_feed_json(
     indoor_data: &IndoorSensorData,
-    indoor_dewpoint: f64,
-    outdoor_dewpoint: f64,
-    dewpoint_delta: f64,
-    keep_windows: bool,
+    indoor_dewpoint: f32,
+    outdoor_dewpoint: f32,
+    dewpoint_delta: f32,
+    open_windows: bool,
     humidity_alert: bool,
 ) -> String {
     json!({
@@ -47,7 +47,7 @@ pub fn prepare_sensor_feed_json(
         "indoor_dewpoint": round_to_2_decimal_places(indoor_dewpoint),
         "outdoor_dewpoint": round_to_2_decimal_places(outdoor_dewpoint),
         "dewpoint_delta": round_to_2_decimal_places(dewpoint_delta),
-        "keep_windows": if keep_windows { "Open" } else { "Closed" },
+        "open_windows": open_windows,
         "humidity_alert": humidity_alert,
     })
     .to_string()

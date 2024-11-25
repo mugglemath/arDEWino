@@ -16,7 +16,7 @@ type clientImpl struct {
 
 type Client interface {
 	InsertSensorFeedData(ctx context.Context, sensorData model.SensorData) error
-	GetLastKeepWindowsValue(ctx context.Context) (string, error)
+	GetLastOpenWindowsValue(ctx context.Context) (bool, error)
 	CheckRecentHumidityAlert(ctx context.Context) (bool, error)
 	CheckForEmptyTable(ctx context.Context, tableName string) (bool, error)
 }
@@ -47,7 +47,7 @@ func (c *clientImpl) InsertSensorFeedData(ctx context.Context, sensorData model.
 	indoorDewpoint := sensorData.IndoorDewpoint
 	outdoorDewpoint := sensorData.OutdoorDewpoint
 	dewpointDelta := sensorData.DewpointDelta
-	keepWindows := sensorData.KeepWindows
+	openWindows := sensorData.OpenWindows
 	humidityAlert := sensorData.HumidityAlert
 
 	batch, err := createBatch(c)
@@ -60,7 +60,7 @@ func (c *clientImpl) InsertSensorFeedData(ctx context.Context, sensorData model.
 	}
 
 	err = appendToBatch(batch, deviceID, indoorTemperature, indoorHumidity, indoorDewpoint,
-		outdoorDewpoint, dewpointDelta, keepWindows, humidityAlert)
+		outdoorDewpoint, dewpointDelta, openWindows, humidityAlert)
 	if err != nil {
 		return fmt.Errorf("failed to append sensor data to batch: %w", err)
 	}
@@ -73,27 +73,27 @@ func (c *clientImpl) InsertSensorFeedData(ctx context.Context, sensorData model.
 	return nil
 }
 
-func (c *clientImpl) GetLastKeepWindowsValue(ctx context.Context) (string, error) {
+func (c *clientImpl) GetLastOpenWindowsValue(ctx context.Context) (bool, error) {
 	query := `
-        SELECT keep_windows
-        FROM my_database.indoor_environment
-        ORDER BY isoTimestamp DESC
+        SELECT open_windows
+        FROM dew.data
+        ORDER BY time DESC
         LIMIT 1
     `
 
-	var lastKeepWindows string
-	err := c.QueryRow(ctx, query).Scan(&lastKeepWindows)
+	var lastOpenWindows bool
+	err := c.QueryRow(ctx, query).Scan(&lastOpenWindows)
 	if err != nil {
-		return "", fmt.Errorf("failed to retrieve last keep windows value: %w", err)
+		return false, fmt.Errorf("failed to retrieve last keep windows value: %w", err)
 	}
-	return lastKeepWindows, nil
+	return lastOpenWindows, nil
 }
 
 func (c *clientImpl) CheckRecentHumidityAlert(ctx context.Context) (bool, error) {
 	query := `
         SELECT COUNT(*) > 0
-        FROM my_database.indoor_environment
-        WHERE humidity_alert = 1 AND isoTimestamp >= now() - toIntervalHour(1)
+        FROM dew.data
+        WHERE humidity_alert = 1 AND time >= now() - toIntervalHour(1)
     `
 
 	var alertExists bool
@@ -106,7 +106,7 @@ func (c *clientImpl) CheckRecentHumidityAlert(ctx context.Context) (bool, error)
 }
 
 func (c *clientImpl) CheckForEmptyTable(ctx context.Context, tableName string) (bool, error) {
-	query := fmt.Sprintf("SELECT 1 FROM my_database.%s LIMIT 1", tableName)
+	query := fmt.Sprintf("SELECT 1 FROM dew.%s LIMIT 1", tableName)
 	rows, err := c.Query(ctx, query)
 	if err != nil {
 		return false, fmt.Errorf("error checking db's table size: %w", err)
@@ -120,16 +120,16 @@ func createBatch(conn clickhouse.Conn) (driver.Batch, error) {
 	ctx := context.Background()
 
 	batch, err := conn.PrepareBatch(ctx, `
-    INSERT INTO my_database.indoor_environment (
+    INSERT INTO dew.data (
         device_id, 
         indoor_temperature, 
         indoor_humidity, 
         indoor_dewpoint, 
         outdoor_dewpoint, 
         dewpoint_delta, 
-        keep_windows, 
+        open_windows, 
         humidity_alert, 
-        isoTimestamp
+        time
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`)
 	if err != nil {
@@ -140,11 +140,11 @@ func createBatch(conn clickhouse.Conn) (driver.Batch, error) {
 
 func appendToBatch(batch driver.Batch, deviceID uint16, indoorTemperature float64,
 	indoorHumidity float64, indoorDewpoint float64, outdoorDewpoint float64,
-	dewpointDelta float64, keepWindows string, humidityAlert bool) error {
+	dewpointDelta float64, openWindows bool, humidityAlert bool) error {
 
 	if err := batch.Append(deviceID, indoorTemperature, indoorHumidity,
 		indoorDewpoint, outdoorDewpoint, dewpointDelta,
-		keepWindows, humidityAlert,
+		openWindows, humidityAlert,
 		time.Now().Format("2006-01-02 15:04:05")); err != nil {
 		return fmt.Errorf("failed to append batch: %w", err)
 	}

@@ -1,4 +1,4 @@
-pub fn calculate_dewpoint(t: f64, rh: f64) -> f64 {
+pub fn calculate_dewpoint(t: f32, rh: f32) -> f32 {
     if !(0.0..=100.0).contains(&rh) {
         panic!("Relative humidity must be between 0 and 100.");
     }
@@ -9,6 +9,6 @@ pub fn calculate_dewpoint(t: f64, rh: f64) -> f64 {
     numerator / denominator
 }
 
-pub fn round_to_2_decimal_places(value: f64) -> f64 {
+pub fn round_to_2_decimal_places(value: f32) -> f32 {
     (value * 100.0).round() / 100.0
 }

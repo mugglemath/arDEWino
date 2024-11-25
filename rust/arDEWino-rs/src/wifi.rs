@@ -27,8 +27,8 @@ pub async fn fetch_indoor_data(
 
         // Parse device_id, temperature, and humidity
         let device_id: u16 = parts[0].trim().parse().map_err(|_| "Invalid device_id format")?;
-        let temperature: f64 = parts[1].trim().parse().map_err(|_| "Invalid temperature format")?;
-        let humidity: f64 = parts[2].trim().parse().map_err(|_| "Invalid humidity format")?;
+        let temperature: f32 = parts[1].trim().parse().map_err(|_| "Invalid temperature format")?;
+        let humidity: f32 = parts[2].trim().parse().map_err(|_| "Invalid humidity format")?;
 
         return Ok(IndoorSensorData { device_id, temperature, humidity });
     }
@@ -37,9 +37,9 @@ pub async fn fetch_indoor_data(
     std::process::exit(1);
 }
 
-pub async fn toggle_warning_light(keep_windows: bool) -> Result<(), Box<dyn Error>> {
+pub async fn toggle_warning_light(open_windows: bool) -> Result<(), Box<dyn Error>> {
     let arduino_ip = std::env::var("ARDUINO_IP")?;
-    let command_value = if keep_windows { "0" } else { "1" };
+    let command_value = if open_windows { "0" } else { "1" };
     let arduino_led_endpoint = format!("{}/led?state={}", arduino_ip, command_value);
     let _ =
         crate::http_requests::post_request(&arduino_led_endpoint, serde_json::json!({})).await?;

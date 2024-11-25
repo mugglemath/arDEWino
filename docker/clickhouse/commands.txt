@@ -9,4 +9,4 @@ docker run -d \
 
 docker run -d --name some-clickhouse-server --ulimit nofile=262144:262144 -v clickhouse_data:/var/lib/clickhouse -v clickhouse_logs:/var/log/clickhouse-server -p 9000:9000 -p 8123:8123 my-clickhouse-image
 
-docker exec -it some-clickhouse-server clickhouse-client --query "SHOW TABLES IN my_database"
+docker exec -it some-clickhouse-server clickhouse-client --query "SHOW TABLES IN dew"
