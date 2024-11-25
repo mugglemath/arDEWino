@@ -17,6 +17,10 @@ type Config struct {
 	GridY        string
 	NWSUserAgent string
 
+	ClickHouseAddress []string
+	DBUsername        string
+	DBPassword        string
+
 	DiscordSensorFeedWebhookURL    string
 	DiscordWindowAlertWebhookURL   string
 	DiscordHumidityAlertWebhookURL string
@@ -36,6 +40,9 @@ func NewConfig() (*Config, error) {
 	config.GridX = os.Getenv("GRID_X")
 	config.GridY = os.Getenv("GRID_Y")
 	config.NWSUserAgent = os.Getenv("NWS_USER_AGENT")
+	config.ClickHouseAddress = []string{"clickhouse:9000"}
+	config.DBUsername = os.Getenv("DB_USERNAME")
+	config.DBPassword = os.Getenv("DB_PASSWORD")
 	config.DiscordSensorFeedWebhookURL = os.Getenv("DISCORD_SENSOR_FEED_WEBHOOK_URL")
 	config.DiscordWindowAlertWebhookURL = os.Getenv("DISCORD_WINDOW_ALERT_WEBHOOK_URL")
 	config.DiscordHumidityAlertWebhookURL = os.Getenv("DISCORD_HUMIDITY_ALERT_WEBHOOK_URL")
