@@ -26,7 +26,7 @@ pub async fn fetch_indoor_data(
         let parts: Vec<&str> = arduino_data.trim().split(',').collect();
 
         // Parse device_id, temperature, and humidity
-        let device_id: u16 = parts[0].trim().parse().map_err(|_| "Invalid device_id format")?;
+        let device_id: u64 = parts[0].trim().parse().map_err(|_| "Invalid device_id format")?;
         let temperature: f32 = parts[1].trim().parse().map_err(|_| "Invalid temperature format")?;
         let humidity: f32 = parts[2].trim().parse().map_err(|_| "Invalid humidity format")?;
 

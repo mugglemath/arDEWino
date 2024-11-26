@@ -147,7 +147,7 @@ func TestInsertSensorFeedData(t *testing.T) {
 	})
 
 	mockBatch.SetAppend(func(args ...any) error {
-		assert.Equal(t, uint16(12345), args[0])
+		assert.Equal(t, uint64(12345), args[0])
 		assert.Equal(t, 22.5, args[1])
 		assert.Equal(t, 55.0, args[2])
 		assert.Equal(t, 10.0, args[3])
@@ -165,7 +165,7 @@ func TestInsertSensorFeedData(t *testing.T) {
 	// test implementation
 	client := New(mockConn)
 	sensorData := model.SensorData{
-		DeviceID:          uint16(12345),
+		DeviceID:          uint64(12345),
 		IndoorTemperature: 22.5,
 		IndoorHumidity:    55.0,
 		IndoorDewpoint:    10.0,
@@ -247,7 +247,7 @@ func TestInsertSensorFeedData_BatchSendFail(t *testing.T) {
 	})
 
 	mockBatch.SetAppend(func(args ...any) error {
-		assert.Equal(t, uint16(12345), args[0])
+		assert.Equal(t, uint64(12345), args[0])
 		assert.Equal(t, 22.5, args[1])
 		assert.Equal(t, 55.0, args[2])
 		assert.Equal(t, 10.0, args[3])
@@ -265,7 +265,7 @@ func TestInsertSensorFeedData_BatchSendFail(t *testing.T) {
 	// test implementation
 	client := New(mockConn)
 	sensorData := model.SensorData{
-		DeviceID:          uint16(12345),
+		DeviceID:          uint64(12345),
 		IndoorTemperature: 22.5,
 		IndoorHumidity:    55.0,
 		IndoorDewpoint:    10.0,

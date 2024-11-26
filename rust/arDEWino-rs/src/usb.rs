@@ -85,7 +85,7 @@ impl UsbCommunication {
             return Err("Invalid data format from Arduino".into());
         }
     
-        let device_id: u16 = parts[0].trim().parse()?;
+        let device_id: u64 = parts[0].trim().parse()?;
         let temperature: f32 = parts[1].trim().parse()?;
         let humidity: f32 = parts[2].trim().parse()?;
     
@@ -116,6 +116,6 @@ fn is_valid_response(response: &str) -> bool {
 }
 
 pub fn is_valid_data_format(input: &str) -> bool {
-    let pattern = Regex::new(r"^\d{1,5},\d{2}\.\d{2},\d{2}\.\d{2}$").unwrap();
+    let pattern = Regex::new(r"^\d{1,20},\d{2}\.\d{2},\d{2}\.\d{2}$").unwrap();
     pattern.is_match(input)
 }

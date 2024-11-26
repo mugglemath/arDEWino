@@ -1,5 +1,5 @@
 CREATE TABLE data (
-    device_id UInt16,
+    device_id UInt64,
     indoor_temperature Float32,
     indoor_humidity Float32,
     indoor_dewpoint Float32,

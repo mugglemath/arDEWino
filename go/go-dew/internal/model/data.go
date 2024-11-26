@@ -6,7 +6,7 @@ import (
 )
 
 type SensorData struct {
-	DeviceID          uint16  `json:"device_id"`
+	DeviceID          uint64  `json:"device_id"`
 	IndoorTemperature float64 `json:"indoor_temperature"`
 	IndoorHumidity    float64 `json:"indoor_humidity"`
 	IndoorDewpoint    float64 `json:"indoor_dewpoint"`
