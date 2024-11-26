@@ -21,13 +21,17 @@ func init() {
 }
 
 func main() {
+	// set env variables
 	config, err := NewConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
 
+	// set gin mode
+	setGinMode(config.GinMode)
+
 	// listen for SIGTERM (and SIGINT) signals
-	_, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
@@ -53,9 +57,12 @@ func main() {
 		log.Fatalf("failed to initialize app: %s", err)
 	}
 
+	// run routine to periodically refresh cached value of OutdoorDewPoint
+	go handler.UpdateOutdoorDewPointCache(ctx)
+
 	// start server
 	r := gin.Default()
-	SetPanicRecoveryMiddleware(r, discordClient.PanicHandler)
+	setPanicRecoveryMiddleware(r, discordClient.PanicHandler)
 	r.GET("/weather/outdoor-dewpoint", handler.HandleOutdoorDewpoint)
 	r.POST("/arduino/sensor-feed", handler.HandleSensorData)
 
@@ -72,7 +79,7 @@ func main() {
 
 type RecoveryFn func(debugStack string, req *http.Request)
 
-func SetPanicRecoveryMiddleware(r *gin.Engine, fn RecoveryFn) {
+func setPanicRecoveryMiddleware(r *gin.Engine, fn RecoveryFn) {
 	r.Use(func(c *gin.Context) {
 		defer func() {
 			if err := recover(); err != nil {
@@ -86,4 +93,17 @@ func SetPanicRecoveryMiddleware(r *gin.Engine, fn RecoveryFn) {
 		}()
 		c.Next()
 	})
+}
+
+func setGinMode(ginMode string) {
+	switch ginMode {
+	case "", "release":
+		gin.SetMode(gin.ReleaseMode)
+	case "debug":
+		gin.SetMode(gin.DebugMode)
+	case "test":
+		gin.SetMode(gin.TestMode)
+	default:
+		log.Fatalf("Invalid GIN_MODE value: %s. Use 'debug', 'test', or 'release'.", ginMode)
+	}
 }

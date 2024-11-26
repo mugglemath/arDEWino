@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +18,7 @@ import (
 type Handler interface {
 	HandleOutdoorDewpoint(ctx *gin.Context)
 	HandleSensorData(ctx *gin.Context)
+	UpdateOutdoorDewPointCache(ctx context.Context)
 }
 
 type handlerImpl struct {
@@ -22,6 +26,20 @@ type handlerImpl struct {
 	discordClient discord.Client
 	weatherClient weather.Client
 }
+
+type CachedValue struct {
+	OutdoorDewPoint float64
+}
+
+const (
+	humidityAlertThreshold      = 60.0
+	dewPointCacheUpdateInterval = 30 * time.Minute
+)
+
+var (
+	cache      CachedValue
+	cacheMutex sync.Mutex
+)
 
 func New(dbClient db.Client, discordClient discord.Client, weatherClient weather.Client) Handler {
 	return &handlerImpl{
@@ -31,12 +49,36 @@ func New(dbClient db.Client, discordClient discord.Client, weatherClient weather
 	}
 }
 
-func (h *handlerImpl) HandleOutdoorDewpoint(ctx *gin.Context) {
-	dewPoint, err := h.weatherClient.GetOutdoorDewPoint(ctx)
-	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+func (h *handlerImpl) UpdateOutdoorDewPointCache(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("Stopping UpdateOutdoorDewPointCache due to cancellation")
+			return
+		default:
+			dewPoint, err := h.weatherClient.GetOutdoorDewPoint(ctx)
+			if err != nil {
+				log.Println("Error fetching data:", err)
+				time.Sleep(5 * time.Second)
+				continue
+			}
+
+			cacheMutex.Lock()
+			cache.OutdoorDewPoint = dewPoint
+			cacheMutex.Unlock()
+
+			log.Println("Updated outdoor dew point cache value:", cache.OutdoorDewPoint)
+
+			time.Sleep(30 * time.Minute)
+		}
 	}
+}
+
+func (h *handlerImpl) HandleOutdoorDewpoint(ctx *gin.Context) {
+	cacheMutex.Lock()
+	dewPoint := cache.OutdoorDewPoint
+	cacheMutex.Unlock()
+
 	ctx.JSON(http.StatusOK, dewPoint)
 }
 
@@ -91,7 +133,7 @@ func (h *handlerImpl) HandleSensorData(ctx *gin.Context) {
 	}
 
 	// handle humidity alert
-	if data.IndoorHumidity > 60.0 {
+	if data.IndoorHumidity > humidityAlertThreshold {
 		recentHumidityAlert, err := h.dbClient.CheckRecentHumidityAlert(ctx)
 		fmt.Printf("recent humidity alert: %t", recentHumidityAlert)
 		if err != nil {

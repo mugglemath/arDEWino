@@ -25,6 +25,8 @@ type Config struct {
 	DiscordWindowAlertWebhookURL   string
 	DiscordHumidityAlertWebhookURL string
 	DiscordDebugWebhookURL         string
+
+	GinMode string
 }
 
 func NewConfig() (*Config, error) {
@@ -47,6 +49,7 @@ func NewConfig() (*Config, error) {
 	config.DiscordWindowAlertWebhookURL = os.Getenv("DISCORD_WINDOW_ALERT_WEBHOOK_URL")
 	config.DiscordHumidityAlertWebhookURL = os.Getenv("DISCORD_HUMIDITY_ALERT_WEBHOOK_URL")
 	config.DiscordDebugWebhookURL = os.Getenv("DISCORD_DEBUG_WEBHOOK_URL")
+	config.GinMode = os.Getenv("GIN_MODE")
 
 	hasLatLong := config.Latitude != "" && config.Longitude != ""
 	hasOfficeGrid := config.Office != "" && config.GridX != "" && config.GridY != ""
