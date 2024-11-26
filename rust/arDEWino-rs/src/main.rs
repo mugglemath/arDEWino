@@ -55,6 +55,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     };
 
+    let led_state = indoor_data.led_state;
     let outdoor_dewpoint = http_requests::get_outdoor_dewpoint().await?;
     let indoor_dewpoint = calculate_dewpoint(indoor_data.temperature, indoor_data.humidity);
     let dewpoint_delta = indoor_dewpoint - outdoor_dewpoint;
@@ -83,7 +84,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     http_requests::post_sensor_feed(&json_data_sensor_feed).await?;
 
     // toggle Arduino warning light
-    if open_windows {
+    if open_windows == led_state {
         if mode == "usb" {
             if let Some(ref mut comm) = usb_comm {
                 usb::UsbCommunication::toggle_warning_light(comm, open_windows)?;
