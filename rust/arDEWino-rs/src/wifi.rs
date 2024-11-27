@@ -7,12 +7,12 @@ use crate::models::IndoorSensorData;
 use crate::usb::is_valid_data_format;
 
 pub async fn fetch_indoor_data(
-    arduino_data_endpoint: &str,
+    arduino_data_endpoint: String,
 ) -> Result<IndoorSensorData, Box<dyn Error>> {
     const MAX_ATTEMPTS: usize = 3;
 
     for attempt in 0..MAX_ATTEMPTS {
-        let arduino_data = get_request(arduino_data_endpoint).await?;
+        let arduino_data = get_request(&arduino_data_endpoint).await?;
         println!("GET Arduino data response = {}", arduino_data.trim());
 
         if !is_valid_data_format(arduino_data.trim()) {

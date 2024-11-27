@@ -1,8 +1,10 @@
 use std::error::Error;
 use std::time::Instant;
 
-use clap::{Arg, Command};
+use clap::{Command, Arg};
 use dotenv::dotenv;
+use std::pin::Pin;
+use std::future::Future;
 
 mod calculations;
 mod http_requests;
@@ -11,6 +13,9 @@ mod usb;
 mod wifi;
 
 use calculations::calculate_dewpoint;
+
+type IndoorDataFuture = Pin<Box<dyn Future<Output = Result<models::IndoorSensorData, Box<dyn Error>>> + Send>>;
+type ToggleLightFuture = Pin<Box<dyn Future<Output = Result<(), Box<dyn Error>>> + Send>>;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -38,32 +43,40 @@ async fn main() -> Result<(), Box<dyn Error>> {
         None
     };
 
-    // get indoor sensor data depending on "usb" or "wifi" mode
-    let indoor_data: models::IndoorSensorData = match mode.as_str() {
+    // fetch outdoor dewpoint and indoor sensor data concurrently
+    let outdoor_dewpoint_future = http_requests::get_outdoor_dewpoint();
+
+    let indoor_data_future: IndoorDataFuture = match mode.as_str() {
         "usb" => {
-            if let Some(ref mut comm) = usb_comm {
-                usb::UsbCommunication::get_indoor_sensor_data(comm).await?
-            } else {
-                return Err("USB communication not initialized.".into());
-            }
+            let mut comm = usb_comm.take().expect("USB communication not initialized.");
+            Box::pin(async move {
+                usb::UsbCommunication::get_indoor_sensor_data(&mut comm).await
+            })
         },
         "wifi" => {
             let arduino_ip = std::env::var("ARDUINO_IP")?;
             let arduino_data_endpoint = format!("{}/data", arduino_ip);
-            wifi::fetch_indoor_data(arduino_data_endpoint.as_str()).await?
-        }
+            Box::pin(wifi::fetch_indoor_data(arduino_data_endpoint))
+        },
         _ => {
             eprintln!("Invalid mode: {}", mode);
             std::process::exit(1);
         }
     };
 
+    // await both futures concurrently
+    let (indoor_data, outdoor_dewpoint) = tokio::join!(indoor_data_future, outdoor_dewpoint_future);
+
+    // handle any errors from the futures
+    let indoor_data = indoor_data?;
+    let outdoor_dewpoint = outdoor_dewpoint?;
+
     let led_state = indoor_data.led_state;
-    let outdoor_dewpoint = http_requests::get_outdoor_dewpoint().await?;
     let indoor_dewpoint = calculate_dewpoint(indoor_data.temperature, indoor_data.humidity);
     let dewpoint_delta = indoor_dewpoint - outdoor_dewpoint;
     let open_windows = dewpoint_delta > -1.0;
     let humidity_alert = indoor_data.humidity > 60.0;
+
     let json_data_sensor_feed = http_requests::prepare_sensor_feed_json(
         &indoor_data,
         indoor_dewpoint,
@@ -83,24 +96,33 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("Humidity Alert: {}", humidity_alert);
     println!("Sensor Feed JSON Data: {}", json_data_sensor_feed);
 
-    // post to sensor feed
-    http_requests::post_sensor_feed(&json_data_sensor_feed).await?;
+    // post to sensor feed and toggle warning light concurrently
+    let post_feed_future = http_requests::post_sensor_feed(&json_data_sensor_feed);
 
-    // toggle Arduino warning light
-    if open_windows == led_state {
+    // toggle light future
+    let toggle_light_future: ToggleLightFuture = if open_windows == led_state {
         if mode == "usb" {
-            if let Some(ref mut comm) = usb_comm {
-                usb::UsbCommunication::toggle_warning_light(comm, open_windows).await?;
-            } else {
-                eprintln!("USB communication not initialized.");
-                std::process::exit(1);
-            }
+            let mut comm = usb_comm.take().expect("USB communication not initialized.");
+            Box::pin(async move {
+                usb::UsbCommunication::toggle_warning_light(&mut comm, open_windows).await
+            })
         } else if mode == "wifi" {
-            wifi::toggle_warning_light(open_windows).await?;
+            Box::pin(wifi::toggle_warning_light(open_windows))
+        } else {
+            Box::pin(async { Ok(()) })
         }
-    }
+    } else {
+        Box::pin(async { Ok(()) })
+    };
 
-    let elapsed_time = start_time_program.elapsed();
-    println!("Total program runtime: {:.2?}", elapsed_time);
-    Ok(())
+    // await both futures concurrently and handle their results
+    let (post_result, toggle_result) = tokio::join!(post_feed_future, toggle_light_future);
+
+    post_result?;
+    toggle_result?;
+
+   let elapsed_time = start_time_program.elapsed();
+   println!("Total program runtime: {:.2?}", elapsed_time);
+
+   Ok(())
 }
