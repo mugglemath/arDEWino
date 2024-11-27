@@ -1,63 +1,50 @@
 use std::error::Error;
-use std::io::{self, Read, Write};
-use std::thread;
-use std::time::Duration;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use regex::Regex;
+use tokio::time::sleep;
+use tokio_serial::{SerialStream, SerialPortBuilderExt};
+use tokio::io::{AsyncWriteExt, AsyncReadExt};
 
 use crate::models::IndoorSensorData;
-use serialport::{DataBits, FlowControl, Parity, SerialPort, StopBits};
 
 pub struct UsbCommunication {
-    port: Box<dyn SerialPort>,
+    port: SerialStream,
 }
 
 impl UsbCommunication {
-    pub fn new(port_name: &str) -> io::Result<Self> {
-        let port = serialport::new(port_name, 115200)
-            .timeout(Duration::from_millis(100))
-            .data_bits(DataBits::Eight)
-            .parity(Parity::None)
-            .stop_bits(StopBits::One)
-            .flow_control(FlowControl::None)
-            .open()?;
-
+    pub async fn new(port_name: &str) -> Result<Self, Box<dyn Error>> {
+        let port = tokio_serial::new(port_name, 115200)
+            .open_native_async()?;
         Ok(UsbCommunication { port })
     }
 
-    fn write_data(&mut self, data: &str) -> io::Result<()> {
-        self.port.write_all(data.as_bytes())?;
+    async fn write_data(&mut self, data: &str) -> Result<(), Box<dyn Error>> {
+        self.port.write_all(data.as_bytes()).await?;
         Ok(())
     }
 
-    fn read_data(&mut self) -> io::Result<String> {
+    async fn read_data(&mut self) -> Result<String, Box<dyn Error>> {
         let mut buffer = [0u8; 32];
-        match self.port.read(&mut buffer) {
-            Ok(n) if n > 0 => {
-                let result = String::from_utf8_lossy(&buffer[..n]).to_string();
-                Ok(result)
-            }
-            Ok(_) => Ok(String::new()),
-            Err(e) => {
-                if e.kind() == io::ErrorKind::TimedOut {
-                    Ok(String::new())
-                } else {
-                    Err(e)
-                }
-            }
+        let n = self.port.read(&mut buffer).await?;
+        
+        if n > 0 {
+            let result = String::from_utf8_lossy(&buffer[..n]).to_string();
+            Ok(result)
+        } else {
+            Ok(String::new())
         }
     }
 
-    fn get_arduino_response(&mut self, command: &str, sleep_duration: u64) -> io::Result<String> {
+    pub async fn get_arduino_response(&mut self, command: &str, sleep_duration: u64) -> Result<String, Box<dyn Error>> {
         let start_time = Instant::now();
         let max_duration = Duration::from_millis(1000);
 
         println!("Waiting for command '{}' ack...", command);
 
         loop {
-            self.write_data(command)?;
-            let response = self.read_data()?;
+            self.write_data(command).await?;
+            let response = self.read_data().await?;
             let trimmed_response = response.trim();
 
             if is_valid_response(trimmed_response) {
@@ -65,20 +52,15 @@ impl UsbCommunication {
                 return Ok(response);
             }
             if start_time.elapsed() >= max_duration {
-                return Err(io::Error::new(
-                    io::ErrorKind::TimedOut,
-                    "Arduino not responding...",
-                ));
+                return Err("Arduino not responding...".into());
             }
-            thread::sleep(Duration::from_millis(sleep_duration));
+            sleep(Duration::from_millis(sleep_duration)).await;
         }
     }
 
-    pub fn get_indoor_sensor_data(
-        usb_comm: &mut UsbCommunication,
-    ) -> Result<IndoorSensorData, Box<dyn Error>> {
+    pub async fn get_indoor_sensor_data(&mut self) -> Result<IndoorSensorData, Box<dyn Error>> {
         let command = "d";
-        let arduino_data = usb_comm.get_arduino_response(command, 50)?;
+        let arduino_data = self.get_arduino_response(command, 50).await?;
         let parts: Vec<&str> = arduino_data.split(',').collect();
         
         let device_id: u64 = parts[0].trim().parse()?;
@@ -98,15 +80,12 @@ impl UsbCommunication {
         })
     }
 
-    pub fn toggle_warning_light(
-        usb_comm: &mut UsbCommunication,
-        open_windows: bool,
-    ) -> Result<(), Box<dyn Error>> {
+    pub async fn toggle_warning_light(&mut self, open_windows: bool) -> Result<(), Box<dyn Error>> {
         if open_windows {
-            usb_comm.get_arduino_response("0", 50)?;
+            self.get_arduino_response("0", 50).await?;
             println!("Warning light OFF");
         } else {
-            usb_comm.get_arduino_response("1", 50)?;
+            self.get_arduino_response("1", 50).await?;
             println!("Warning light ON");
         }
         Ok(())

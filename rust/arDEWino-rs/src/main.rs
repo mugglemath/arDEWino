@@ -10,12 +10,8 @@ mod models;
 mod usb;
 mod wifi;
 
-use crate::models::IndoorSensorData;
 use calculations::calculate_dewpoint;
-use usb::UsbCommunication;
 
-// TODO: refactor for concurrency
-// TODO: consider removing USB support
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let start_time_program = Instant::now();
@@ -30,20 +26,27 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 .index(1),
         )
         .get_matches();
+    
     let mode = matches.get_one::<String>("mode").unwrap();
     println!("Running in {} mode", mode);
 
     // establish serial communication if mode == "usb"
     let mut usb_comm = if mode == "usb" {
         let port = std::env::var("ARDUINO_PORT")?;
-        Some(UsbCommunication::new(&port)?)
+        Some(usb::UsbCommunication::new(&port).await?)
     } else {
         None
     };
 
     // get indoor sensor data depending on "usb" or "wifi" mode
-    let indoor_data: IndoorSensorData = match mode.as_str() {
-        "usb" => usb::UsbCommunication::get_indoor_sensor_data(usb_comm.as_mut().unwrap())?,
+    let indoor_data: models::IndoorSensorData = match mode.as_str() {
+        "usb" => {
+            if let Some(ref mut comm) = usb_comm {
+                usb::UsbCommunication::get_indoor_sensor_data(comm).await?
+            } else {
+                return Err("USB communication not initialized.".into());
+            }
+        },
         "wifi" => {
             let arduino_ip = std::env::var("ARDUINO_IP")?;
             let arduino_data_endpoint = format!("{}/data", arduino_ip);
@@ -87,7 +90,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     if open_windows == led_state {
         if mode == "usb" {
             if let Some(ref mut comm) = usb_comm {
-                usb::UsbCommunication::toggle_warning_light(comm, open_windows)?;
+                usb::UsbCommunication::toggle_warning_light(comm, open_windows).await?;
             } else {
                 eprintln!("USB communication not initialized.");
                 std::process::exit(1);

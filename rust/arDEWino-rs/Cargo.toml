@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 serialport = "4.6.0"
+tokio-serial = "5.4.4"  # Check for the latest version
 regex = "1"
 reqwest = { version = "0.11", features = ["json"] }
 tokio = { version = "1", features = ["full"] }
