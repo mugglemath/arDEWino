@@ -1,8 +1,6 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include "Adafruit_SHT31.h"
-#include <UUID.h>
-#include <Preferences.h>
 
 const char* SSID = "<your-router-ssid>";
 const char* PASSWORD = "your-router-password";
@@ -12,11 +10,12 @@ const int NUM_READINGS = 48;
 const long INTERVAL = 10000;
 
 String deviceId = "";
-bool ledState = false;
+bool ledState = LOW;
 float temperatureReadings[NUM_READINGS];
 float humidityReadings[NUM_READINGS];
 int readingIndex = 0;
-unsigned long previousMillis = 0;
+unsigned long sensorPreviousMillis = 0;
+unsigned long lightPreviousMillis = 0;
 float humidityOffset = 0;
 float temperatureOffset = 0;
 
@@ -63,10 +62,7 @@ void loop() {
   delay(1);
   readSensorData();
   handleSerialInput();
-
-  if (ledState) {
-    blinkLED();
-  }
+  blinkLED();
 }
 
 void initWiFi() {
@@ -95,9 +91,13 @@ void handleSerialInput() {
 
       if (!isnan(avgTemp) && !isnan(avgHumid)) {
         Serial.flush();
+        Serial.print(deviceId);
+        Serial.print(",");
         Serial.print(avgTemp);
         Serial.print(",");
         Serial.print(avgHumid);
+        Serial.print(",");
+        Serial.print(ledState);
         Serial.println();
       } else {
         Serial.println(-1);
@@ -112,7 +112,7 @@ void handleSerialInput() {
 }
 
 void handleDataRequest() {
-  String message = deviceId + "," + String(averageTemperature()) + "," + String(averageHumidity()) + "\n";
+  String message = deviceId + "," + String(averageTemperature()) + "," + String(averageHumidity()) + "," + String(ledState) + "\n";
   server.send(200, "text/plain", message);
 }
 
@@ -150,8 +150,8 @@ float averageHumidity() {
 void readSensorData() {
   unsigned long currentMillis = millis();
 
-  if (currentMillis - previousMillis >= INTERVAL) {
-    previousMillis = currentMillis;
+  if (currentMillis - sensorPreviousMillis >= INTERVAL) {
+    sensorPreviousMillis = currentMillis;
 
     float currentTemperature = sht31.readTemperature() - temperatureOffset;
     float currentHumidity = sht31.readHumidity() - humidityOffset;
@@ -164,7 +164,13 @@ void readSensorData() {
 }
 
 void blinkLED() {
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(BLINK_DURATION);
-  digitalWrite(LED_BUILTIN, LOW);
+  if (ledState) {
+    unsigned long currentMillis = millis();
+    if (currentMillis - lightPreviousMillis >= BLINK_DURATION) {
+      lightPreviousMillis = currentMillis;
+      digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+    }
+  } else {
+    digitalWrite(LED_BUILTIN, LOW);
+  }
 }

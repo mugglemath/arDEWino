@@ -122,7 +122,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     toggle_result?;
 
    let elapsed_time = start_time_program.elapsed();
-   println!("Total program runtime: {:.2?}", elapsed_time);
+   println!("Total program runtime: {:.2?}\n", elapsed_time);
 
    Ok(())
 }
