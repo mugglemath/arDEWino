@@ -16,12 +16,13 @@ arDEWino can notify users when the outdoor dew point is higher than the indoor d
   * Retrieves sensor data from Arduino over WiFi/USB
 * go-dew:
   * REST API that handles outdoor weather information, sending Discord notifications/alerts, and the database
-* [ClickHouse](https://clickhouse.com):
-  * Open source columnar database optimized for analytics
+* [TimescaleDB](https://www.timescale.com)
+  * Open source time series database that extends Postgres
 * [Grafana](https://grafana.com):
   * Open source interactive visualization and monitoring web app that connects to your data sources
 
 ## How to Use
+This app is currently in early development and can be used locally with either Docker if you prefer to use containers, or compile the Rust and Go apps and install TimescaleDB and Grafana, or some combination of both. A Release/Package coming soon!
 
 ### Requirements
 * Arduino Nano ESP32 Microcontroller
@@ -29,7 +30,7 @@ arDEWino can notify users when the outdoor dew point is higher than the indoor d
 * Arduino IDE
 * Docker
 
-### Local Setup
+### Local Setup with Docker
 1. Connect sensor to microcontroller (use jumper cables to an Arduino with headers if you don't want to solder)
 2. Set the SSID and Password variables in [arduino/sketches/nano_esp32_usb_wifi.ino](/arduino/sketches/nano_esp32_usb_wifi.ino)
 3. Upload this sketch file with your WiFi information to your Arduino using Arduino IDE
@@ -52,4 +53,4 @@ Google Maps: (40.74867,-73.98628)                LONGITUDE=-73.98628
 6. Open `localhost:3000` in your web browser
 
 > [!WARNING]
-> ClickHouse and Grafana come with default usernames and passwords. Change before deploying.
+> TimescaleDB and Grafana come with default usernames and passwords. Change before deploying.
