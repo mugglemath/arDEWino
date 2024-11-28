@@ -52,6 +52,7 @@ func main() {
 	})
 
 	handler := handler.New(dbClient, discordClient, weatherClient)
+	err = handler.Initialize(ctx)
 	if err != nil {
 		log.Fatalf("failed to initialize app: %s", err)
 	}

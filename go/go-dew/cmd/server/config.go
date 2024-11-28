@@ -53,7 +53,7 @@ func NewConfig() (*Config, error) {
 	config.DiscordDebugWebhookURL = os.Getenv("DISCORD_DEBUG_WEBHOOK_URL")
 	config.GinMode = os.Getenv("GIN_MODE")
 
-	dsn = fmt.Sprintf("host=postgres user=%s password=%s dbname=%s port=5432 sslmode=disable",
+	dsn = fmt.Sprintf("host=localhost user=%s password=%s dbname=%s port=5432 sslmode=disable",
 		config.PostgresUser, config.PostgresPassword, config.PostgresDatabase)
 
 	hasLatLong := config.Latitude != "" && config.Longitude != ""

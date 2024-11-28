@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -19,17 +19,19 @@ type Handler interface {
 	HandleOutdoorDewpoint(ctx *gin.Context)
 	HandleSensorData(ctx *gin.Context)
 	UpdateOutdoorDewPointCache(ctx context.Context)
+	Initialize(ctx context.Context) error
 }
 
 type handlerImpl struct {
-	dbClient      db.Client
-	discordClient discord.Client
-	weatherClient weather.Client
+	dbClient        db.Client
+	discordClient   discord.Client
+	weatherClient   weather.Client
+	outdoorDewPoint atomic.Pointer[DewPoint]
 }
 
-type CachedValue struct {
-	OutdoorDewPoint float64
-	sync.Mutex
+type DewPoint struct {
+	Value      float64
+	LastUpdate time.Time
 }
 
 const (
@@ -39,14 +41,16 @@ const (
 	minRetryInterval            = 1 * time.Second
 )
 
-var cache CachedValue
-
 func New(dbClient db.Client, discordClient discord.Client, weatherClient weather.Client) Handler {
 	return &handlerImpl{
 		dbClient:      dbClient,
 		discordClient: discordClient,
 		weatherClient: weatherClient,
 	}
+}
+
+func (h *handlerImpl) Initialize(ctx context.Context) error {
+	return h.updateOutdoorDewPoint(ctx)
 }
 
 func (h *handlerImpl) UpdateOutdoorDewPointCache(ctx context.Context) {
@@ -58,32 +62,36 @@ func (h *handlerImpl) UpdateOutdoorDewPointCache(ctx context.Context) {
 			log.Println("Stopping UpdateOutdoorDewPointCache due to cancellation")
 			return
 		case <-ticker.C:
-			waitTime := minRetryInterval
-			start := time.Now()
-			for {
-				dewPoint, err := h.weatherClient.GetOutdoorDewPoint(ctx)
-				if err == nil {
-					cache.Lock()
-					cache.OutdoorDewPoint = dewPoint
-					cache.Unlock()
-					break
-				}
-				if (time.Since(start) + waitTime) >= totalRetryTime {
-					break
-				}
-				time.Sleep(waitTime)
-				waitTime *= 2
-			}
-			log.Println("Updated outdoor dew point cache value:", cache.OutdoorDewPoint)
+			h.updateOutdoorDewPoint(ctx)
 		}
 	}
 }
 
-func (h *handlerImpl) HandleOutdoorDewpoint(ctx *gin.Context) {
-	cache.Lock()
-	dewPoint := cache.OutdoorDewPoint
-	cache.Unlock()
+func (h *handlerImpl) updateOutdoorDewPoint(ctx context.Context) (err error) {
+	waitTime := minRetryInterval
+	start := time.Now()
+	for {
+		var dewPoint DewPoint
+		dewPoint.Value, err = h.weatherClient.GetOutdoorDewPoint(ctx)
+		if err == nil {
+			dewPoint.LastUpdate = time.Now()
+			h.outdoorDewPoint.Store(&dewPoint)
+			break
+		}
+		if (time.Since(start) + waitTime) >= totalRetryTime {
+			break
+		}
+		time.Sleep(waitTime)
+		waitTime *= 2
+	}
+	if h.outdoorDewPoint.Load() != nil {
+		log.Println("Updated outdoor dew point cache value:", h.outdoorDewPoint.Load().Value)
+	}
+	return
+}
 
+func (h *handlerImpl) HandleOutdoorDewpoint(ctx *gin.Context) {
+	dewPoint := h.outdoorDewPoint.Load().Value
 	ctx.JSON(http.StatusOK, dewPoint)
 }
 
