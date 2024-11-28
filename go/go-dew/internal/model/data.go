@@ -12,8 +12,12 @@ type SensorData struct {
 	IndoorDewpoint    float64 `json:"indoor_dewpoint"`
 	OutdoorDewpoint   float64 `json:"outdoor_dewpoint"`
 	DewpointDelta     float64 `json:"dewpoint_delta"`
-	OpenWindows       bool    `json:"open_windows"`
-	HumidityAlert     bool    `json:"humidity_alert"`
+	OpenWindows       bool    `json:"open_windows" gorm:"type:boolean"`
+	HumidityAlert     bool    `json:"humidity_alert" gorm:"type:boolean"`
+}
+
+func (s *SensorData) TableName() string {
+	return "data"
 }
 
 func (s *SensorData) FeedMessage() string {

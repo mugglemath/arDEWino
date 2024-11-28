@@ -37,11 +37,10 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	// initialize clients
-	conn, dbClient, err := db.ConnectToClickHouse(config.ClickHouseAddress, config.DBUsername, config.DBPassword)
+	_, dbClient, err := db.ConnectToPostgres(dsn)
 	if err != nil {
 		log.Fatalf("failed to connect to db: %s", err)
 	}
-	defer conn.Close()
 
 	weatherClient := weather.NewClient(config.Office, config.GridX, config.GridY, config.NWSUserAgent)
 

@@ -5,7 +5,6 @@ services:
     restart: unless-stopped
     environment:
       - GF_SERVER_ROOT_URL=http://grafana.server/
-      - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
     ports:
       - '3000:3000'
     volumes:

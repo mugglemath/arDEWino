@@ -1,4 +1,4 @@
-name: arDEWino-dev
+name: arDEWino-dev-template
 
 services:
   ardewino-rs:
@@ -8,6 +8,8 @@ services:
       dockerfile: docker/ardewino-rs/Dockerfile.ardewino-rs
     env_file:
         - ../rust/arDEWino-rs/.env
+    depends_on:
+      - go-dew
     # volumes:
     #   - ../rust/arDEWino-rs/src:/usr/src/app/src             # bind mount for live code updates
     environment:
@@ -43,41 +45,36 @@ services:
     #   - GRID_X=111
     #   - GRID_Y=22
     #   - NWS_USER_AGENT=can-be-any-string
-    #   - DB_USERNAME=default # these are clickhouse defaults make sure to change user/pw
-    #   - DB_PASSWORD=
     #   - DISCORD_SENSOR_FEED_WEBHOOK_URL=https://discord.com/api/webhooks/...
     #   - DISCORD_WINDOW_ALERT_WEBHOOK_URL=https://discord.com/api/webhooks/...
     #   - DISCORD_HUMIDITY_ALERT_WEBHOOK_URL=https://discord.com/api/webhooks/...
     #   - DISCORD_DEBUG_WEBHOOK_URL=https://discord.com/api/webhooks/...
     #   - GIN_MODE=debug
     depends_on:
-        - ardewino-rs
+        - postgres
     expose:
         - '5000'
     restart: unless-stopped
 
-  clickhouse:
-    # image: clickhouse:${VERSION} # use for version tagging
-    build:
-        context: ..
-        dockerfile: docker/clickhouse/Dockerfile.clickhouse
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    container_name: timescale_db
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pw
+      POSTGRES_DB: db
+    ports:
+      - "5432:5432"
     restart: unless-stopped
     volumes:
-      - ./clickhouse/init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ../db/clickhouse/schema.sql:/docker-entrypoint-initdb.d/schema.sql
-      - clickhouse_data:/var/lib/clickhouse
-      - clickhouse_logs:/var/log/clickhouse-server
-    expose:
-      - '8123'
-      - '9000'
-    command: bash -c "ulimit -n 262144 && /entrypoint.sh"
+      - postgres_data:/var/lib/postgresql/data
+      - ./timescale/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   grafana:
     image: grafana/grafana-oss
     restart: unless-stopped
     depends_on:
-      - go-dew
-      - clickhouse
+      - postgres
     environment:
       - GF_SERVER_ROOT_URL=http://grafana.server/
       - GF_INSTALL_PLUGINS=grafana-clickhouse-datasource
@@ -87,6 +84,5 @@ services:
       - grafana_storage:/var/lib/grafana
 
 volumes:
-  clickhouse_data:
-  clickhouse_logs:
+  postgres_data:
   grafana_storage:

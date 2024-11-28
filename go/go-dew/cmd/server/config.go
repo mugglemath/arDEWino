@@ -17,9 +17,9 @@ type Config struct {
 	GridY        string
 	NWSUserAgent string
 
-	ClickHouseAddress []string
-	DBUsername        string
-	DBPassword        string
+	PostgresUser     string
+	PostgresPassword string
+	PostgresDatabase string
 
 	DiscordSensorFeedWebhookURL    string
 	DiscordWindowAlertWebhookURL   string
@@ -28,6 +28,8 @@ type Config struct {
 
 	GinMode string
 }
+
+var dsn string
 
 func NewConfig() (*Config, error) {
 	err := godotenv.Load()
@@ -42,14 +44,17 @@ func NewConfig() (*Config, error) {
 	config.GridX = os.Getenv("GRID_X")
 	config.GridY = os.Getenv("GRID_Y")
 	config.NWSUserAgent = os.Getenv("NWS_USER_AGENT")
-	config.ClickHouseAddress = []string{"clickhouse:9000"}
-	config.DBUsername = os.Getenv("DB_USERNAME")
-	config.DBPassword = os.Getenv("DB_PASSWORD")
+	config.PostgresUser = os.Getenv("POSTGRES_USER")
+	config.PostgresPassword = os.Getenv("POSTGRES_PASSWORD")
+	config.PostgresDatabase = os.Getenv("POSTGRES_DB")
 	config.DiscordSensorFeedWebhookURL = os.Getenv("DISCORD_SENSOR_FEED_WEBHOOK_URL")
 	config.DiscordWindowAlertWebhookURL = os.Getenv("DISCORD_WINDOW_ALERT_WEBHOOK_URL")
 	config.DiscordHumidityAlertWebhookURL = os.Getenv("DISCORD_HUMIDITY_ALERT_WEBHOOK_URL")
 	config.DiscordDebugWebhookURL = os.Getenv("DISCORD_DEBUG_WEBHOOK_URL")
 	config.GinMode = os.Getenv("GIN_MODE")
+
+	dsn = fmt.Sprintf("host=postgres user=%s password=%s dbname=%s port=5432 sslmode=disable",
+		config.PostgresUser, config.PostgresPassword, config.PostgresDatabase)
 
 	hasLatLong := config.Latitude != "" && config.Longitude != ""
 	hasOfficeGrid := config.Office != "" && config.GridX != "" && config.GridY != ""
