@@ -29,17 +29,17 @@ type handlerImpl struct {
 
 type CachedValue struct {
 	OutdoorDewPoint float64
+	sync.Mutex
 }
 
 const (
 	humidityAlertThreshold      = 60.0
-	dewPointCacheUpdateInterval = 30 * time.Minute
+	dewPointCacheUpdateInterval = 15 * time.Minute
+	totalRetryTime              = 5 * time.Minute
+	minRetryInterval            = 1 * time.Second
 )
 
-var (
-	cache      CachedValue
-	cacheMutex sync.Mutex
-)
+var cache CachedValue
 
 func New(dbClient db.Client, discordClient discord.Client, weatherClient weather.Client) Handler {
 	return &handlerImpl{
@@ -50,34 +50,39 @@ func New(dbClient db.Client, discordClient discord.Client, weatherClient weather
 }
 
 func (h *handlerImpl) UpdateOutdoorDewPointCache(ctx context.Context) {
+	ticker := time.NewTicker(dewPointCacheUpdateInterval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			log.Println("Stopping UpdateOutdoorDewPointCache due to cancellation")
 			return
-		default:
-			dewPoint, err := h.weatherClient.GetOutdoorDewPoint(ctx)
-			if err != nil {
-				log.Println("Error fetching data:", err)
-				time.Sleep(5 * time.Second)
-				continue
+		case <-ticker.C:
+			waitTime := minRetryInterval
+			start := time.Now()
+			for {
+				dewPoint, err := h.weatherClient.GetOutdoorDewPoint(ctx)
+				if err == nil {
+					cache.Lock()
+					cache.OutdoorDewPoint = dewPoint
+					cache.Unlock()
+					break
+				}
+				if (time.Since(start) + waitTime) >= totalRetryTime {
+					break
+				}
+				time.Sleep(waitTime)
+				waitTime *= 2
 			}
-
-			cacheMutex.Lock()
-			cache.OutdoorDewPoint = dewPoint
-			cacheMutex.Unlock()
-
 			log.Println("Updated outdoor dew point cache value:", cache.OutdoorDewPoint)
-
-			time.Sleep(30 * time.Minute)
 		}
 	}
 }
 
 func (h *handlerImpl) HandleOutdoorDewpoint(ctx *gin.Context) {
-	cacheMutex.Lock()
+	cache.Lock()
 	dewPoint := cache.OutdoorDewPoint
-	cacheMutex.Unlock()
+	cache.Unlock()
 
 	ctx.JSON(http.StatusOK, dewPoint)
 }

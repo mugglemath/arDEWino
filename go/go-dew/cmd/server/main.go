@@ -39,7 +39,7 @@ func main() {
 	// initialize clients
 	_, dbClient, err := db.ConnectToPostgres(dsn)
 	if err != nil {
-		log.Fatalf("failed to connect to db: %s", err)
+		log.Fatalf("failed to connect to db: %w", err)
 	}
 
 	weatherClient := weather.NewClient(config.Office, config.GridX, config.GridY, config.NWSUserAgent)
