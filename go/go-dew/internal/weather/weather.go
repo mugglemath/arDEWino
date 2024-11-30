@@ -47,6 +47,7 @@ func NewClient(office, gridX, gridY, userAgent string) *clientImpl {
 	}
 }
 
+// GetGridData parses the NWS points response and returns the gridpoints variables
 func GetGridData(latitude, longitude, userAgent string) (string, int, int, error) {
 	baseURL := fmt.Sprintf("https://api.weather.gov/points/%s,%s", latitude, longitude)
 
@@ -77,6 +78,7 @@ func GetGridData(latitude, longitude, userAgent string) (string, int, int, error
 	return pointResponse.Properties.Office, pointResponse.Properties.GridX, pointResponse.Properties.GridY, nil
 }
 
+// GetOutdoorDewPoint retrieves the outdoor dew point from NWS using the gridpoints variables
 func (c *clientImpl) GetOutdoorDewPoint(ctx context.Context) (float64, error) {
 	req, err := http.NewRequest("GET", c.baseURL, nil)
 	if err != nil {
@@ -110,6 +112,7 @@ func (c *clientImpl) GetOutdoorDewPoint(ctx context.Context) (float64, error) {
 }
 
 // uses Magnus-Tetens formula for dew point
+// this function is used in dewpoint-go and unused in go-dew for now
 func dewPointCalculator(temperature, relativeHumidity float64) (float64, error) {
 	if temperature < -273.15 {
 		return temperature, errors.New("temperature must be greater than or equal to -273.15")
