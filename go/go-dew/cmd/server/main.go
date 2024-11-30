@@ -39,7 +39,7 @@ func main() {
 	// initialize clients
 	_, dbClient, err := db.ConnectToPostgres(dsn)
 	if err != nil {
-		log.Fatalf("failed to connect to db: %w", err)
+		log.Fatalf("failed to connect to db: %s", err)
 	}
 
 	weatherClient := weather.NewClient(config.Office, config.GridX, config.GridY, config.NWSUserAgent)
@@ -56,9 +56,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to initialize app: %s", err)
 	}
-
-	// run routine to periodically refresh cached value of OutdoorDewPoint
-	go handler.UpdateOutdoorDewPointCache(ctx)
 
 	// start server
 	r := gin.Default()

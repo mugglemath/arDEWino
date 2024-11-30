@@ -18,7 +18,7 @@ import (
 type Handler interface {
 	HandleOutdoorDewpoint(ctx *gin.Context)
 	HandleSensorData(ctx *gin.Context)
-	UpdateOutdoorDewPointCache(ctx context.Context)
+	UpdateOutdoorDewPoint(ctx context.Context)
 	Initialize(ctx context.Context) error
 }
 
@@ -35,10 +35,8 @@ type DewPoint struct {
 }
 
 const (
-	humidityAlertThreshold      = 60.0
-	dewPointCacheUpdateInterval = 15 * time.Minute
-	totalRetryTime              = 5 * time.Minute
-	minRetryInterval            = 1 * time.Second
+	humidityAlertThreshold = 60.0
+	updateInterval         = 15 * time.Minute
 )
 
 func New(dbClient db.Client, discordClient discord.Client, weatherClient weather.Client) Handler {
@@ -53,44 +51,19 @@ func (h *handlerImpl) Initialize(ctx context.Context) error {
 	return h.updateOutdoorDewPoint(ctx)
 }
 
-func (h *handlerImpl) UpdateOutdoorDewPointCache(ctx context.Context) {
-	ticker := time.NewTicker(dewPointCacheUpdateInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			log.Println("Stopping UpdateOutdoorDewPointCache due to cancellation")
-			return
-		case <-ticker.C:
-			h.updateOutdoorDewPoint(ctx)
-		}
+// UpdateOutdoorDewPoint asynchronously updates dewPoint if value is stale
+func (h *handlerImpl) UpdateOutdoorDewPoint(ctx context.Context) {
+	if time.Now().After(h.outdoorDewPoint.Load().LastUpdate.Add(updateInterval)) {
+		go func() {
+			_ = h.updateOutdoorDewPoint(ctx)
+		}()
 	}
 }
 
-func (h *handlerImpl) updateOutdoorDewPoint(ctx context.Context) (err error) {
-	waitTime := minRetryInterval
-	start := time.Now()
-	for {
-		var dewPoint DewPoint
-		dewPoint.Value, err = h.weatherClient.GetOutdoorDewPoint(ctx)
-		if err == nil {
-			dewPoint.LastUpdate = time.Now()
-			h.outdoorDewPoint.Store(&dewPoint)
-			break
-		}
-		if (time.Since(start) + waitTime) >= totalRetryTime {
-			break
-		}
-		time.Sleep(waitTime)
-		waitTime *= 2
-	}
-	if h.outdoorDewPoint.Load() != nil {
-		log.Println("Updated outdoor dew point cache value:", h.outdoorDewPoint.Load().Value)
-	}
-	return
-}
-
+// HandleOutdoorDewpoint may return a stale value up to twice the call interval
+// (e.g. 2 minutes if called every 1 minute)
 func (h *handlerImpl) HandleOutdoorDewpoint(ctx *gin.Context) {
+	h.UpdateOutdoorDewPoint(ctx)
 	dewPoint := h.outdoorDewPoint.Load().Value
 	ctx.JSON(http.StatusOK, dewPoint)
 }
@@ -171,4 +144,22 @@ func (h *handlerImpl) HandleSensorData(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{"status": "success", "message": "POST request received"})
+}
+
+// updateOutdoorDewPoint atomically updates dewPoint from National Weather Service
+func (h *handlerImpl) updateOutdoorDewPoint(ctx context.Context) (err error) {
+	for i := 0; i < 10; i++ {
+		var dewPoint DewPoint
+		dewPoint.Value, err = h.weatherClient.GetOutdoorDewPoint(ctx)
+		if err == nil {
+			dewPoint.LastUpdate = time.Now()
+			h.outdoorDewPoint.Store(&dewPoint)
+			break
+		}
+		time.Sleep(time.Second * 5)
+	}
+	if h.outdoorDewPoint.Load() != nil && err == nil {
+		log.Println("Updated outdoor dew point cache value:", h.outdoorDewPoint.Load().Value)
+	}
+	return
 }
