@@ -12,7 +12,7 @@ on:
       - 'go/go-dew/**'
 
 jobs:
-  lint-test-build:
+  go-dew-lint-test-build:
     name: lint-test-build
     runs-on: ubuntu-latest
     steps:
@@ -36,3 +36,28 @@ jobs:
         run: |
           cd ./go/go-dew/cmd/server
           go build -o go-dew-app
+  
+  dewdrop-go-lint-test-build:
+    name: lint-test-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      
+      - name: Run GolangCI-Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.60
+          working-directory: ./go/dewdrop-go/cmd/dewdrop
+      
+      - name: Run Go Tests
+        run: |
+          cd ./go/dewdrop-go
+          go test ./...
+
+      - name: Build the Go Project
+        run: |
+          cd ./go/dewdrop-go/cmd/dewdrop
+          go build -o dewdrop-go-app

@@ -41,23 +41,23 @@ func main() {
 	var min, max, sum time.Duration
 
 	for {
-		select {
-		case <-ticker.C:
-			start := time.Now()
-			fmt.Println()
-			execute(mode)
-			elapsed := time.Since(start)
-			sum += elapsed
-			n++
-			if elapsed < min || min == 0 {
-				min = elapsed
-			}
-			if elapsed > max || max == 0 {
-				max = elapsed
-			}
-			fmt.Printf("%d Execution time: %s Average: %s Min: %s Max: %s\n",
-				n, elapsed, time.Duration(int64(sum)/n), min, max)
+		<-ticker.C
+		start := time.Now()
+		fmt.Println()
+		execute(mode)
+		elapsed := time.Since(start)
+		sum += elapsed
+		n++
+
+		if elapsed < min || min == 0 {
+			min = elapsed
 		}
+		if elapsed > max || max == 0 {
+			max = elapsed
+		}
+
+		fmt.Printf("%d Execution time: %s Average: %s Min: %s Max: %s\n",
+			n, elapsed, time.Duration(int64(sum)/n), min, max)
 	}
 }
 
