@@ -94,13 +94,14 @@ func (h *handlerImpl) HandleSensorData(ctx *gin.Context) {
 	// send Discord feed if it's time
 	now := time.Now()
 	if now.Minute() == 0 {
-		if err := h.discordClient.SendSensorFeed(data.FeedMessage()); err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send data to Discord feed"})
-			return
-		}
+		go func() {
+			if err := h.discordClient.SendSensorFeed(data.FeedMessage()); err != nil {
+				log.Println("failed to send data to Discord feed")
+			}
+		}()
 	}
 
-	// handle window alert toggle
+	// handle window alert with discord
 	currentOpenWindows := data.OpenWindows
 	lastOpenWindows, err := h.dbClient.GetLastOpenWindowsValue(ctx)
 	if err != nil {
@@ -108,33 +109,38 @@ func (h *handlerImpl) HandleSensorData(ctx *gin.Context) {
 		return
 	}
 	if currentOpenWindows != lastOpenWindows {
-		if err := h.discordClient.SendSensorFeed(data.FeedMessage()); err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send sensor feed to Discord"})
-			return
-		}
-		if err := h.discordClient.SendWindowAlert(data.WindowAlertMessage()); err != nil {
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to window alert to Discord"})
-			return
-		}
+		go func() {
+			if err := h.discordClient.SendSensorFeed(data.FeedMessage()); err != nil {
+				log.Println("failed to send sensor feed to Discord")
+			}
+		}()
+		go func() {
+			if err := h.discordClient.SendWindowAlert(data.WindowAlertMessage()); err != nil {
+				log.Println("failed to send window alert to Discord")
+			}
+		}()
 	}
 
-	// handle humidity alert
+	// handle humidity alert with discord
 	if data.IndoorHumidity > humidityAlertThreshold {
 		recentHumidityAlert, err := h.dbClient.CheckRecentHumidityAlert(ctx)
 		fmt.Printf("recent humidity alert: %t", recentHumidityAlert)
 		if err != nil {
-			fmt.Println("failed to check recent humidity alert: ")
+			log.Printf("failed to check recent humidity alert: %s", err)
 			return
 		}
 		if !recentHumidityAlert {
-			if err := h.discordClient.SendSensorFeed(data.FeedMessage()); err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send sensor feed to Discord"})
-				return
-			}
-			if err := h.discordClient.SendHumidityAlert(data.HumidityAlertMessage()); err != nil {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": "failed to send humidity alert to Discord"})
-				return
-			}
+			go func() {
+				if err := h.discordClient.SendSensorFeed(data.FeedMessage()); err != nil {
+					log.Println("failed to send sensor feed to Discord")
+				}
+			}()
+
+			go func() {
+				if err := h.discordClient.SendHumidityAlert(data.HumidityAlertMessage()); err != nil {
+					log.Println("failed to send humidity alert to Discord")
+				}
+			}()
 		}
 	}
 

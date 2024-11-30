@@ -24,6 +24,32 @@ services:
     #   - GET_URL=http://go-dew:5000/weather/outdoor-dewpoint
     #   - POST_URL_SENSOR_FEED=http://go-dew:5000/arduino/sensor-feed
     restart: unless-stopped
+
+  # dewdrop-go:
+  #   build:
+  #     context: ..
+  #     dockerfile: docker/dewdrop-go/Dockerfile.dewdrop-go
+  #   # env_file:
+  #   #     - ../rust/arDEWino-rs/.env
+  #   volumes:
+  #     - ../go/dewdrop-go/cmd:/go/src/app/cmd  # bind mount for live code updates
+  #     - ../go/dewdrop-go/internal:/go/src/app/internal
+  #     - ../go/dewdrop-go/pkg:/go/src/app/pkg
+  #   # environment:
+  #       # INTERVAL is how often, in seconds, arDEWino-rs requests data from the Arduino
+  #       # the Arduino itself keeps a simple moving average of readings over 480 seconds
+  #       # set INTERVAL to how many data points you want in your dashboard (i.e. 60/hr)
+  #   environment:
+  #   # example environment variables
+  #     - INTERVAL=60
+  #     - MODE=wifi # can also be 'usb'
+  #     - ARDUINO_PORT=/dev/ttyUSB0
+  #     - ARDUINO_IP=http://10.0.0.123
+  #     - GET_URL=http://go-dew:5000/weather/outdoor-dewpoint
+  #     - POST_URL_SENSOR_FEED=http://go-dew:5000/arduino/sensor-feed
+  #   depends_on:
+  #       - go-dew
+  #   restart: unless-stopped
   
   go-dew:
     # image: go-dew:${VERSION} # use for version tagging

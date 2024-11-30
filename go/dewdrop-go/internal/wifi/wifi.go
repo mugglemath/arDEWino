@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/mugglemath/dewdrop-go/pkg/models"
 	"github.com/mugglemath/dewdrop-go/pkg/utils"
@@ -24,14 +25,13 @@ func GetIndoorSensorData(endpoint string) (models.IndoorSensorData, error) {
 
 	var indoorData models.IndoorSensorData
 	if resp.StatusCode == http.StatusOK {
-
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return models.IndoorSensorData{}, errors.New("failed to read response body")
 		}
 
 		responseString := string(body)
-		fmt.Println("Response body:", responseString)
+		fmt.Println("Response body:", strings.TrimSpace(responseString))
 
 		parts := utils.SplitAndTrim(responseString, ',')
 		if len(parts) < 4 {

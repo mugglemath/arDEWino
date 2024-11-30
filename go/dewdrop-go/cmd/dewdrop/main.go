@@ -3,10 +3,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
-	"github.com/joho/godotenv"
 	"github.com/mugglemath/dewdrop-go/internal/requests"
 	"github.com/mugglemath/dewdrop-go/internal/usb"
 	"github.com/mugglemath/dewdrop-go/internal/wifi"
@@ -15,21 +15,58 @@ import (
 )
 
 func main() {
-	startTime := time.Now()
-	err := godotenv.Load()
-	if err != nil {
-		fmt.Println("error loading env variables")
-		return
-	}
+	intervalStr := os.Getenv("INTERVAL")
+	const defaultInterval = 60
+	var interval int
 
-	mode := os.Args[1]
+	mode := os.Getenv("MODE")
 	fmt.Printf("Running in %s mode\n", mode)
 
+	if intervalStr != "" {
+		var err error
+		interval, err = strconv.Atoi(intervalStr)
+		if err != nil {
+			fmt.Printf("Invalid INTERVAL value, using default: %d seconds\n", defaultInterval)
+			interval = defaultInterval
+		}
+	} else {
+		fmt.Printf("INTERVAL not set, using default: %d seconds\n", defaultInterval)
+		interval = defaultInterval
+	}
+
+	ticker := time.NewTicker(time.Duration(interval) * time.Second)
+	defer ticker.Stop()
+
+	var n int64
+	var min, max, sum time.Duration
+
+	for {
+		select {
+		case <-ticker.C:
+			start := time.Now()
+			fmt.Println()
+			execute(mode)
+			elapsed := time.Since(start)
+			sum += elapsed
+			n++
+			if elapsed < min || min == 0 {
+				min = elapsed
+			}
+			if elapsed > max || max == 0 {
+				max = elapsed
+			}
+			fmt.Printf("%d Execution time: %s Average: %s Min: %s Max: %s\n",
+				n, elapsed, time.Duration(int64(sum)/n), min, max)
+		}
+	}
+}
+
+func execute(mode string) {
 	var indoorData models.IndoorSensorData
 	var outdoorDewpoint float32
 	var wg sync.WaitGroup
 
-	wg.Add(2)
+	wg.Add(1)
 
 	// fetch indoor data asynchronously
 	go func() {
@@ -63,15 +100,12 @@ func main() {
 	}()
 
 	// fetch outdoor dewpoint asynchronously
-	go func() {
-		defer wg.Done()
-		dewpoint, err := requests.GetOutdoorDewpoint()
-		if err != nil {
-			fmt.Println("Error fetching outdoor dewpoint:", err)
-			os.Exit(1)
-		}
-		outdoorDewpoint = dewpoint
-	}()
+	dewpoint, err := requests.GetOutdoorDewpoint()
+	if err != nil {
+		fmt.Println("Error fetching outdoor dewpoint:", err)
+		os.Exit(1)
+	}
+	outdoorDewpoint = dewpoint
 
 	wg.Wait()
 
@@ -86,23 +120,7 @@ func main() {
 	openWindows := dewpointDelta > -1.0
 	humidityAlert := indoorData.Humidity > 60.0
 
-	payload, err := requests.PrepareSensorFeedJSON(&indoorData, float32(indoorDewpoint),
-		outdoorDewpoint, float32(dewpointDelta), openWindows, humidityAlert)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	wg.Add(2)
-
-	// post sensor feed data asynchronously
-	go func() {
-		defer wg.Done()
-		if err = requests.PostSensorFeed(payload); err != nil {
-			fmt.Println("Error posting sensor feed:", err)
-		}
-	}()
-
+	wg.Add(1)
 	// toggle the warning light asynchronously
 	go func() {
 		defer wg.Done()
@@ -126,6 +144,18 @@ func main() {
 			}
 		}
 	}()
+
+	// post sensor feed data asynchronously
+	payload, err := requests.PrepareSensorFeedJSON(&indoorData, float32(indoorDewpoint),
+		outdoorDewpoint, float32(dewpointDelta), openWindows, humidityAlert)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	if err = requests.PostSensorFeed(payload); err != nil {
+		fmt.Println("Error posting sensor feed:", err)
+	}
+
 	wg.Wait()
 
 	fmt.Printf("Indoor Temperature: %.2f\n", indoorData.Temperature)
@@ -136,8 +166,4 @@ func main() {
 	fmt.Printf("Open Windows: %v\n", openWindows)
 	fmt.Printf("Humidity Alert: %v\n", humidityAlert)
 	fmt.Printf("Sensor Feed JSON Data: %s\n", string(payload))
-
-	fmt.Println("Program completed successfully.")
-	elapsedTime := time.Since(startTime)
-	fmt.Printf("Total execution time: %v\n", elapsedTime)
 }

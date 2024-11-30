@@ -4,22 +4,25 @@ FROM golang:alpine
 WORKDIR /go/src/app
 
 # Copy go.mod and go.sum files
-COPY ./go/go-dew/go.mod ./
-COPY ./go/go-dew/go.sum ./
+COPY ./go/dewdrop-go/go.mod ./
+COPY ./go/dewdrop-go/go.sum ./
 
 # Download dependencies
 RUN go mod download
 
-# Copy go.mod and go.sum files
-COPY ./go/go-dew ./
+# Copy source files
+COPY ./go/dewdrop-go ./
 
 # Build the application
-RUN go build -o go-dew-app ./cmd/server
+RUN go build -o dewdrop-go-app ./cmd/dewdrop
 
 FROM golang:alpine
 
 # copy just the binary to a fresh alpine image
 COPY --from=0 /go/src/app ./
 
+# use maximum 2 cpu threads
+ENV GOMAXPROCS=2
+
 # Run the application
-CMD ["./go-dew-app"]
+CMD ["./dewdrop-go-app"]
