@@ -37,12 +37,15 @@ func main() {
 	signal.Notify(sigs, syscall.SIGTERM, syscall.SIGINT)
 
 	// initialize clients
-	_, dbClient, err := db.ConnectToPostgres(dsn)
+	_, dbClient, err := db.ConnectToPostgres(dsn, nil)
 	if err != nil {
 		log.Fatalf("failed to connect to db: %s", err)
 	}
 
-	weatherClient := weather.NewClient(config.Office, config.GridX, config.GridY, config.NWSUserAgent)
+	weatherClient, err := weather.NewClient(config.Office, config.GridX, config.GridY, config.NWSUserAgent)
+	if err != nil {
+		log.Fatalf("failed to initialize weather client: %s", err)
+	}
 
 	discordClient := discord.New(&discord.Config{
 		SensorFeedWebhook:    config.DiscordSensorFeedWebhookURL,

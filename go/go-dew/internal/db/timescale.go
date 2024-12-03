@@ -24,10 +24,13 @@ func New(db *gorm.DB) Client {
 	return &clientImpl{db: db}
 }
 
-func ConnectToPostgres(dsn string) (*gorm.DB, Client, error) {
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		return nil, nil, err
+func ConnectToPostgres(dsn string, db *gorm.DB) (*gorm.DB, Client, error) {
+	if db == nil {
+		var err error
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		if err != nil {
+			return nil, nil, err
+		}
 	}
 	fmt.Println("Successfully connected to PostgreSQL!")
 	return db, &clientImpl{db: db}, nil

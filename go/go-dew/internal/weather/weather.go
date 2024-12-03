@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"time"
 )
@@ -38,13 +37,22 @@ type PointResponse struct {
 	} `json:"properties"`
 }
 
-func NewClient(office, gridX, gridY, userAgent string) *clientImpl {
+func NewClient(office, gridX, gridY, userAgent string) (*clientImpl, error) {
+	if office == "" {
+		return nil, errors.New("office cannot be empty")
+	}
+	if gridX == "" {
+		return nil, errors.New("gridX cannot be empty")
+	}
+	if gridY == "" {
+		return nil, errors.New("gridY cannot be empty")
+	}
 	baseURL := fmt.Sprintf("https://api.weather.gov/gridpoints/%s/%s,%s", office, gridX, gridY)
 	return &clientImpl{
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 		baseURL:    baseURL,
 		userAgent:  userAgent,
-	}
+	}, nil
 }
 
 // GetGridData parses the NWS points response and returns the gridpoints variables
@@ -109,31 +117,4 @@ func (c *clientImpl) GetOutdoorDewPoint(ctx context.Context) (float64, error) {
 	}
 
 	return response.Properties.Dewpoint.Values[0].Value, nil
-}
-
-// uses Magnus-Tetens formula for dew point
-// this function is used in dewpoint-go and unused in go-dew for now
-func dewPointCalculator(temperature, relativeHumidity float64) (float64, error) {
-	if temperature < -273.15 {
-		return temperature, errors.New("temperature must be greater than or equal to -273.15")
-	}
-	if relativeHumidity < 0 || relativeHumidity > 100 {
-		return temperature, errors.New("relative humidity must be between 0 and 100")
-	}
-	if math.IsNaN(temperature) || math.IsNaN(relativeHumidity) {
-		return temperature, errors.New("input values must not be NaN")
-	}
-	if math.IsInf(temperature, 0) || math.IsInf(relativeHumidity, 0) {
-		return temperature, errors.New("input values must not be infinite")
-	}
-
-	t := temperature
-	rh := relativeHumidity
-	dewPoint := (243.04 * (math.Log(rh/100) + ((17.625 * t) / (243.04 + t)))) /
-		(17.625 - math.Log(rh/100) - ((17.625 * t) / (243.04 + t)))
-
-	if math.IsNaN(dewPoint) {
-		return 0, errors.New("result is NaN")
-	}
-	return dewPoint, nil
 }

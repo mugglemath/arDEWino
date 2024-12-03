@@ -5,11 +5,58 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
+
+func TestNewClient_ValidInputs(t *testing.T) {
+	client, err := NewClient("OFFICE", "100", "200", "test-agent")
+	if err != nil {
+		t.Fatalf("Expected no error, got %v", err)
+	}
+	expectedURL := "https://api.weather.gov/gridpoints/OFFICE/100,200"
+	if client.baseURL != expectedURL {
+		t.Errorf("Expected baseURL %s, got %s", expectedURL, client.baseURL)
+	}
+	if client.userAgent != "test-agent" {
+		t.Errorf("Expected userAgent %s, got %s", "test-agent", client.userAgent)
+	}
+	if client.httpClient.Timeout != 10*time.Second {
+		t.Errorf("Expected Timeout to be %v, got %v", 10*time.Second, client.httpClient.Timeout)
+	}
+}
+
+func TestNewClient_EmptyOffice(t *testing.T) {
+	client, err := NewClient("", "100", "200", "test-agent")
+	if err == nil {
+		t.Fatal("Expected an error but got none")
+	}
+	if client != nil {
+		t.Errorf("Expected client to be nil but got a valid client")
+	}
+}
+
+func TestNewClient_EmptyGridX(t *testing.T) {
+	client, err := NewClient("OFFICE", "", "200", "test-agent")
+	if err == nil {
+		t.Fatal("Expected an error but got none")
+	}
+	if client != nil {
+		t.Errorf("Expected client to be nil but got a valid client")
+	}
+}
+
+func TestNewClient_EmptyGridY(t *testing.T) {
+	client, err := NewClient("OFFICE", "100", "", "test-agent")
+	if err == nil {
+		t.Fatal("Expected an error but got none")
+	}
+	if client != nil {
+		t.Errorf("Expected client to be nil but got a valid client")
+	}
+}
 
 func TestGetOutdoorDewPoint(t *testing.T) {
 	// create a test server
@@ -177,70 +224,5 @@ func TestGetOutdoorDewPoint_CancelledContext(t *testing.T) {
 	_, err := c.GetOutdoorDewPoint(ctx)
 	if err == nil {
 		t.Errorf("GetOutdoorDewPoint did not return an error for a cancelled context")
-	}
-}
-
-func TestDewPointCalculator_ValidInput(t *testing.T) {
-	temperature := 20.0
-	relativeHumidity := 60.0
-	expectedDewpoint := 11.99
-	actualDewpoint, _ := dewPointCalculator(temperature, relativeHumidity)
-	if math.Abs(actualDewpoint-expectedDewpoint) > 0.01 {
-		t.Errorf("DewpointCalculator returned an unexpected dew point: %f, expected %f", actualDewpoint, expectedDewpoint)
-	}
-}
-
-func TestDewPointCalculator_InvalidTemperature(t *testing.T) {
-	temperature := -300.0
-	relativeHumidity := 60.0
-
-	_, err := dewPointCalculator(temperature, relativeHumidity)
-	if err == nil {
-		t.Errorf("DewpointCalculator did not return an error for invalid temperature")
-	}
-}
-
-func TestDewPointCalculator_InvalidRelativeHumidity(t *testing.T) {
-	temperature := 20.0
-	relativeHumidity := -10.0
-
-	_, err := dewPointCalculator(temperature, relativeHumidity)
-	if err == nil {
-		t.Errorf("DewpointCalculator did not return an error for invalid relative humidity")
-	}
-}
-
-func TestDewPointCalculator_EdgeCases(t *testing.T) {
-	tests := []struct {
-		temperature      float64
-		relativeHumidity float64
-		expectedDewpoint float64
-	}{
-		{0, 0, -273.15},
-		{0, 100, 0},
-		{20, 0, -273.15},
-		{20, 100, 20},
-	}
-	for _, test := range tests {
-		actualDewpoint, err := dewPointCalculator(test.temperature, test.relativeHumidity)
-		if err != nil {
-			if test.relativeHumidity == 0 {
-				continue
-			}
-			t.Errorf("DewpointCalculator returned an unexpected error: %v", err)
-		}
-		if math.Abs(actualDewpoint-test.expectedDewpoint) > 0.01 {
-			t.Errorf("DewpointCalculator returned an unexpected dew point: %f, expected %f", actualDewpoint, test.expectedDewpoint)
-		}
-	}
-}
-
-func TestDewPointCalculator_NaNInput(t *testing.T) {
-	temperature := math.NaN()
-	relativeHumidity := 60.0
-
-	_, err := dewPointCalculator(temperature, relativeHumidity)
-	if err == nil {
-		t.Errorf("DewpointCalculator did not return an error for a NaN temperature")
 	}
 }

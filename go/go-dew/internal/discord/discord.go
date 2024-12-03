@@ -88,12 +88,11 @@ func sendMessage(webHookURL string, message string) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 204 {
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("failed to send message to Discord: %w\n%s", err, body)
-		}
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("failed to send message to Discord: %s (status: %d)", body, resp.StatusCode)
 	}
+
 	return nil
 }
 
