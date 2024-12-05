@@ -74,7 +74,8 @@ func execute(mode string) {
 		if mode == "wifi" {
 			arduinoIP := os.Getenv("ARDUINO_IP")
 			endpoint := fmt.Sprintf("%s/data", arduinoIP)
-			data, err := wifi.GetIndoorSensorData(endpoint)
+			wifiComm := wifi.NewWifiClient()
+			data, err := wifiComm.GetIndoorSensorData(endpoint)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -100,7 +101,8 @@ func execute(mode string) {
 	}()
 
 	// fetch outdoor dewpoint asynchronously
-	dewpoint, err := requests.GetOutdoorDewpoint()
+	httpRequests := requests.New()
+	dewpoint, err := httpRequests.GetOutdoorDewpoint()
 	if err != nil {
 		fmt.Println("Error fetching outdoor dewpoint:", err)
 		os.Exit(1)
@@ -126,8 +128,7 @@ func execute(mode string) {
 		defer wg.Done()
 		if openWindows == ledState {
 			if mode == "usb" {
-				var usbComm *usb.UsbCommunication
-				usbComm, err = usb.NewUsbCommunication(os.Getenv("ARDUINO_PORT"))
+				usbComm, err := usb.NewUsbCommunication(os.Getenv("ARDUINO_PORT"))
 				if err != nil {
 					fmt.Println(err)
 					os.Exit(1)
@@ -137,7 +138,8 @@ func execute(mode string) {
 					os.Exit(1)
 				}
 			} else if mode == "wifi" {
-				if err = wifi.ToggleWarningLight(openWindows); err != nil {
+				wifiComm := wifi.NewWifiClient()
+				if err = wifiComm.ToggleWarningLight(openWindows); err != nil {
 					fmt.Println(err)
 					os.Exit(1)
 				}
@@ -146,13 +148,13 @@ func execute(mode string) {
 	}()
 
 	// post sensor feed data asynchronously
-	payload, err := requests.PrepareSensorFeedJSON(&indoorData, float32(indoorDewpoint),
+	payload, err := httpRequests.PrepareSensorFeedJSON(&indoorData, float32(indoorDewpoint),
 		outdoorDewpoint, float32(dewpointDelta), openWindows, humidityAlert)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	if err = requests.PostSensorFeed(payload); err != nil {
+	if err = httpRequests.PostSensorFeed(payload); err != nil {
 		fmt.Println("Error posting sensor feed:", err)
 	}
 

@@ -12,11 +12,21 @@ import (
 	"github.com/tarm/serial"
 )
 
-type UsbCommunication struct {
-	port *serial.Port
+type Client interface {
+	GetIndoorSensorData() (models.IndoorSensorData, error)
+	ToggleWarningLight(openWindows bool) error
 }
 
-func NewUsbCommunication(portName string) (*UsbCommunication, error) {
+type SerialPort interface {
+	Write(data []byte) (int, error)
+	Read(buffer []byte) (int, error)
+}
+
+type usbClientImpl struct {
+	port SerialPort
+}
+
+func NewUsbCommunication(portName string) (*usbClientImpl, error) {
 	c := &serial.Config{
 		Name: portName,
 		Baud: 115200,
@@ -25,28 +35,11 @@ func NewUsbCommunication(portName string) (*UsbCommunication, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &UsbCommunication{port: port}, nil
-}
-
-func (usb *UsbCommunication) writeData(data string) error {
-	_, err := usb.port.Write([]byte(data))
-	return err
-}
-
-func (usb *UsbCommunication) readData() (string, error) {
-	buffer := make([]byte, 32)
-	n, err := usb.port.Read(buffer)
-	if err != nil {
-		return "", err
-	}
-	if n > 0 {
-		return string(bytes.TrimSpace(buffer[:n])), nil
-	}
-	return "", nil
+	return &usbClientImpl{port: port}, nil
 }
 
 // GetIndoorSensorData retrieves the sensor data from the Arduino
-func (usb *UsbCommunication) GetIndoorSensorData() (models.IndoorSensorData, error) {
+func (usb *usbClientImpl) GetIndoorSensorData() (models.IndoorSensorData, error) {
 	command := "d"
 	response, err := usb.getArduinoResponse(command, 50*time.Millisecond)
 	if err != nil {
@@ -79,7 +72,7 @@ func (usb *UsbCommunication) GetIndoorSensorData() (models.IndoorSensorData, err
 }
 
 // ToggleWarningLight toggles the blinking yellow light on the Arduino
-func (usb *UsbCommunication) ToggleWarningLight(openWindows bool) error {
+func (usb *usbClientImpl) ToggleWarningLight(openWindows bool) error {
 	command := "1"
 	if openWindows {
 		command = "0"
@@ -100,9 +93,9 @@ func (usb *UsbCommunication) ToggleWarningLight(openWindows bool) error {
 }
 
 // getArduinoResponse sends the Arduino a command and retrieves the response
-func (usb *UsbCommunication) getArduinoResponse(command string, sleepDuration time.Duration) (string, error) {
+func (usb *usbClientImpl) getArduinoResponse(command string, sleepDuration time.Duration) (string, error) {
 	startTime := time.Now()
-	maxDuration := time.Millisecond * 1000
+	maxDuration := time.Millisecond * 500
 
 	fmt.Printf("Waiting for command '%s' ack...\n", command)
 
@@ -122,9 +115,26 @@ func (usb *UsbCommunication) getArduinoResponse(command string, sleepDuration ti
 		}
 
 		if time.Since(startTime) >= maxDuration {
-			return "", errors.New("Arduino not responding...")
+			return response, nil
 		}
 
 		time.Sleep(sleepDuration)
 	}
+}
+
+func (usb *usbClientImpl) readData() (string, error) {
+	buffer := make([]byte, 32)
+	n, err := usb.port.Read(buffer)
+	if err != nil {
+		return "", err
+	}
+	if n > 0 {
+		return string(bytes.TrimSpace(buffer[:n])), nil
+	}
+	return "", nil
+}
+
+func (usb *usbClientImpl) writeData(data string) error {
+	_, err := usb.port.Write([]byte(data))
+	return err
 }

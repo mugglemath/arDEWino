@@ -14,8 +14,27 @@ import (
 	"github.com/mugglemath/dewdrop-go/pkg/models"
 )
 
+type Client interface {
+	GetOutdoorDewpoint() (float32, error)
+	PrepareSensorFeedJSON(
+		indoorData *models.IndoorSensorData,
+		indoorDewpoint float32,
+		outdoorDewpoint float32,
+		dewpointDelta float32,
+		openWindows bool,
+		humidityAlert bool,
+	) (string, error)
+	PostSensorFeed(jsonString string) error
+}
+
+type clientImpl struct{}
+
+func New() Client {
+	return &clientImpl{}
+}
+
 // GetOutdoorDewpoint retrieves the outdoor dewpoint from a configured URL asynchronously.
-func GetOutdoorDewpoint() (float32, error) {
+func (c *clientImpl) GetOutdoorDewpoint() (float32, error) {
 	getURL := os.Getenv("GET_URL")
 	getResponse, err := getRequestAsync(getURL)
 	if err != nil {
@@ -33,7 +52,7 @@ func GetOutdoorDewpoint() (float32, error) {
 }
 
 // PrepareSensorFeedJSON prepares the JSON payload for the sensor feed.
-func PrepareSensorFeedJSON(
+func (c *clientImpl) PrepareSensorFeedJSON(
 	indoorData *models.IndoorSensorData,
 	indoorDewpoint float32,
 	outdoorDewpoint float32,
@@ -61,7 +80,7 @@ func PrepareSensorFeedJSON(
 }
 
 // PostSensorFeed posts the sensor feed JSON data to a configured URL asynchronously.
-func PostSensorFeed(jsonString string) error {
+func (c *clientImpl) PostSensorFeed(jsonString string) error {
 	sensorFeedURL := os.Getenv("POST_URL_SENSOR_FEED")
 	data := make(map[string]interface{})
 

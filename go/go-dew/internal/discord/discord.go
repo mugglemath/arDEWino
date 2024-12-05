@@ -13,15 +13,15 @@ import (
 	"time"
 )
 
-type clientImpl struct {
-	config Config
-}
-
 type Client interface {
 	SendSensorFeed(message string) error
 	SendWindowAlert(message string) error
 	SendHumidityAlert(message string) error
 	PanicHandler(debugStack string, req *http.Request)
+}
+
+type clientImpl struct {
+	config Config
 }
 
 type Config struct {

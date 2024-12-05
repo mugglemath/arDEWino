@@ -15,8 +15,19 @@ import (
 	"github.com/mugglemath/dewdrop-go/pkg/utils"
 )
 
-// GetIndoorSensorData retrieves the sensor data from the Arduino
-func GetIndoorSensorData(endpoint string) (models.IndoorSensorData, error) {
+type Client interface {
+	GetIndoorSensorData(endpoint string) (models.IndoorSensorData, error)
+	ToggleWarningLight(openWindows bool) error
+}
+
+type wifiClientImpl struct{}
+
+func NewWifiClient() Client {
+	return &wifiClientImpl{}
+}
+
+// GetIndoorSensorData retrieves the sensor data from the Arduino.
+func (w *wifiClientImpl) GetIndoorSensorData(endpoint string) (models.IndoorSensorData, error) {
 	resp, err := http.Get(endpoint)
 	if err != nil {
 		return models.IndoorSensorData{}, err
@@ -76,8 +87,8 @@ func GetIndoorSensorData(endpoint string) (models.IndoorSensorData, error) {
 	return indoorData, nil
 }
 
-// ToggleWarningLight toggles the blinking yellow light on the Arduino
-func ToggleWarningLight(openWindows bool) error {
+// ToggleWarningLight toggles the blinking yellow light on the Arduino.
+func (w *wifiClientImpl) ToggleWarningLight(openWindows bool) error {
 	arduinoIP := os.Getenv("ARDUINO_IP")
 	if arduinoIP == "" {
 		return errors.New("ARDUINO_IP environment variable is not set")
