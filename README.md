@@ -12,7 +12,7 @@ arDEWino is an Arduino-based dew point monitor designed to help maintain optimal
 arDEWino can notify users when the outdoor dew point is higher than the indoor dew point, indicating that it's best to keep windows closed to prevent excess humidity from entering the home. The system can also be used for real-time temperature and humidity alerts, making it suitable for monitoring conditions for pets, instruments, or anything else sensitive to climate changes.
 
 ## Current Components/Services
-* arDEWino-rs:
+* dewdrop-go:
   * Retrieves sensor data from Arduino over WiFi/USB
 * go-dew:
   * REST API that handles outdoor weather information, sending Discord notifications/alerts, and the database
@@ -22,7 +22,7 @@ arDEWino can notify users when the outdoor dew point is higher than the indoor d
   * Open source interactive visualization and monitoring web app that connects to your data sources
 
 ## How to Use
-This app is currently in early development and can be used locally with either Docker if you prefer to use containers, or compile the Rust and Go apps and install TimescaleDB and Grafana, or some combination of both. A Release/Package coming soon!
+This app is currently in early development and can be used locally with either Docker if you prefer to use containers, or compile the Rust or Go apps and install TimescaleDB and Grafana, or some combination of both. A Release/Package coming soon!
 
 ### Requirements
 * Arduino Nano ESP32 Microcontroller
