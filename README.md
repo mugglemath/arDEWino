@@ -2,9 +2,11 @@
 ## Overview
 
 <div align="center">
-    <img src="images/overview.png" alt="Overview" style="width:30%; margin-right:10%;">
-    <img src="images/temp-humidity.png" alt="Temp / Humidity" style="width:30%; margin-right:10%;">
-    <img src="images/discord-feed.jpeg" alt="Discord Feed" style="width:12%;">
+    <img src="images/overview-2.png" alt="Overview" style="width:30%; margin-right:10%;">
+    <img src="images/temp-humidity-2.png" alt="Temp / Humidity" style="width:30%; margin-right:10%;">
+    <img src="images/discord-feed.jpeg" alt="Discord Feed" style="width:11%;margin-right:10%;">
+    <img src="images/discord-window-bot.PNG" alt="Discord Feed" style="width:11%;margin-right:10%;">
+    <img src="images/discord-humidity-bot.PNG" alt="Discord Feed" style="width:11%;margin-right:10%;">
 </div>
 
 
